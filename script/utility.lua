@@ -2073,7 +2073,7 @@ function Galaxy.BattleSystem(c)
 	--生命为 0 时自动破坏
 	local e4 = Effect.CreateEffect(c)
 	e4:SetType(EFFECT_TYPE_SINGLE)
-	e4:SetProperty(EFFECT_FLAG_SINGLE_RANGE)
+	e4:SetProperty(EFFECT_FLAG_SINGLE_RANGE + EFFECT_FLAG_CANNOT_DISABLE)
 	e4:SetRange(LOCATION_MZONE)
 	e4:SetCode(EFFECT_SELF_DESTROY)
 	e4:SetCondition(Galaxy.SelfDestroy)

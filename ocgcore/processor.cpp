@@ -3398,10 +3398,10 @@ void field::calculate_battle_damage(effect** pdamchange, card** preason_card, ui
 				reason_card = core.attack_target;
 				bd[0] = TRUE;
 			} else {
-				if(attacker_value != 0) {
-					bd[0] = TRUE;
-					bd[1] = TRUE;
-				}
+				// Equal attack case - in Galaxy system, monsters are not immediately destroyed
+				// HP reduction will be handled by Galaxy.ReduceHP, self-destruction by Galaxy.SelfDestroy
+				// Only mark for battle destruction if both monsters would have 0 or negative HP after battle
+				// For now, let the Galaxy system handle the aftermath rather than immediate destruction
 			}
 		} else {
 			defender_value = dd;
