@@ -2068,7 +2068,8 @@ function Galaxy.BattleSystem(c)
 	e3:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
 	e3:SetCode(EVENT_DAMAGE_STEP_END)
 	e3:SetProperty(property)
-	e3:SetCondition(Galaxy.ReduceHP)
+	e3:SetCondition(Galaxy.ReduceHPCondition)
+	e3:SetOperation(Galaxy.ReduceHP)
 	Duel.RegisterEffect(e3, 0)
 	--生命为 0 时自动破坏
 	local e4 = Effect.CreateEffect(c)
@@ -2083,21 +2084,28 @@ function Galaxy.BattleSystem(c)
 	e5:SetProperty(property + EFFECT_FLAG_IGNORE_IMMUNE)
 	e5:SetLabelObject(e4)
 	Duel.RegisterEffect(e5, 0)
-	--不造成战斗伤害
+	--立即检查0血怪兽进行销毁（调整时点）
 	local e6 = Effect.CreateEffect(c)
-	e6:SetType(EFFECT_TYPE_FIELD)
-	e6:SetCode(EFFECT_CHANGE_DAMAGE)
-	e6:SetProperty(property + EFFECT_FLAG_PLAYER_TARGET)
-	e6:SetTargetRange(1, 1)
-	e6:SetValue(Galaxy.ChangeBattleDamage)
+	e6:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
+	e6:SetCode(EVENT_ADJUST)
+	e6:SetProperty(property)
+	e6:SetOperation(Galaxy.CheckZeroHP)
 	Duel.RegisterEffect(e6, 0)
-	--优先选择有保护的单位攻击
+	--不造成战斗伤害
 	local e7 = Effect.CreateEffect(c)
 	e7:SetType(EFFECT_TYPE_FIELD)
-	e7:SetCode(EFFECT_CANNOT_SELECT_BATTLE_TARGET)
-	e7:SetTargetRange(LOCATION_MZONE, LOCATION_MZONE)
-	e7:SetValue(Galaxy.ProtectAttackLimit)
+	e7:SetCode(EFFECT_CHANGE_DAMAGE)
+	e7:SetProperty(property + EFFECT_FLAG_PLAYER_TARGET)
+	e7:SetTargetRange(1, 1)
+	e7:SetValue(Galaxy.ChangeBattleDamage)
 	Duel.RegisterEffect(e7, 0)
+	--优先选择有保护的单位攻击
+	local e8 = Effect.CreateEffect(c)
+	e8:SetType(EFFECT_TYPE_FIELD)
+	e8:SetCode(EFFECT_CANNOT_SELECT_BATTLE_TARGET)
+	e8:SetTargetRange(LOCATION_MZONE, LOCATION_MZONE)
+	e8:SetValue(Galaxy.ProtectAttackLimit)
+	Duel.RegisterEffect(e8, 0)
 end
 
 --在本回合召唤
@@ -2106,11 +2114,18 @@ function Galaxy.SummonThisTurn(e,c)
 		or c:IsStatus(STATUS_FLIP_SUMMON_TURN) or c:IsStatus(STATUS_SPSUMMON_TURN))
 end
 
+--伤害步骤结束时的条件检查（仅怪兽对怪兽战斗时）
+function Galaxy.ReduceHPCondition(e,tp,eg,ep,ev,re,r,rp)
+	local atker = Duel.GetAttacker()
+	local defer = Duel.GetAttackTarget()
+	return atker and defer
+end
+
 --伤害步骤结束时处理守备力减少（仅怪兽对怪兽战斗时）
 function Galaxy.ReduceHP(e,tp,eg,ep,ev,re,r,rp)
 	local atker = Duel.GetAttacker()
 	local defer = Duel.GetAttackTarget()
-	if not (atker and defer) then return false end
+	if not (atker and defer) then return end
 	local e1 = Effect.CreateEffect(atker)
 	e1:SetType(EFFECT_TYPE_SINGLE)
 	e1:SetCode(EFFECT_UPDATE_DEFENSE)
@@ -2120,12 +2135,19 @@ function Galaxy.ReduceHP(e,tp,eg,ep,ev,re,r,rp)
 	local e2 = e1:Clone()
 	e2:SetValue(-atker:GetAttack())
 	defer:RegisterEffect(e2)
-	return false
 end
 
 --守备力为0时的自动破坏条件
 function Galaxy.SelfDestroy(e)
 	return e:GetHandler():GetDefense() <= 0
+end
+
+--立即检查并销毁0血怪兽（调整时点触发）
+function Galaxy.CheckZeroHP(e,tp,eg,ep,ev,re,r,rp)
+	local g = Duel.GetMatchingGroup(function(c) return c:IsFaceup() and c:GetDefense() <= 0 end, tp, LOCATION_MZONE, LOCATION_MZONE, nil)
+	if g:GetCount() > 0 then
+		Duel.Destroy(g, REASON_RULE)
+	end
 end
 
 --不造成战斗伤害（如果有攻击目标，说明非直接攻击玩家，阻止伤害）
