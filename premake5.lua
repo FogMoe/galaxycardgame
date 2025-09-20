@@ -436,7 +436,7 @@ workspace "YGOPro"
         targetdir "bin/debug/x64"
 
     filter { "configurations:Release", "action:vs*" }
-        linktimeoptimization "On"
+        -- linktimeoptimization "On"  -- Commented for compatibility with older premake5 versions
         staticruntime "On"
         disablewarnings { "4244", "4267", "4838", "4996", "6011", "6031", "6054", "6262" }
 

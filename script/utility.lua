@@ -2200,6 +2200,30 @@ end
 --==============================================
 
 --获取/检查 单位生命值相关
+--Galaxy HP utility functions for Shadowverse-style damage management
+Galaxy = Galaxy or {}
+
+-- Apply damage using Shadowverse-style HP tracking
+function Galaxy.ApplyDamage(c, damage)
+	local e1=Effect.CreateEffect(c)
+	e1:SetType(EFFECT_TYPE_SINGLE)
+	e1:SetCode(EFFECT_UPDATE_DEFENSE)
+	e1:SetValue(-damage)
+	e1:SetReset(RESET_EVENT+RESETS_STANDARD)
+	c:RegisterEffect(e1)
+end
+
+-- Get current HP (alias for consistency)
+function Card.GetCurrentHp(c)
+	return c:GetDefense()
+end
+
+-- Get maximum HP (base defense)
+function Card.GetMaxHp(c)
+	return c:GetBaseDefense()
+end
+
+-- Galaxy HP aliases (existing)
 Card.GetHp = Card.GetDefense
 Card.GetBaseHp = Card.GetBaseDefense
 Card.IsHp = Card.IsDefense

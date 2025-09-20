@@ -90,6 +90,8 @@ void card_state::init_state() {
 	defense = -1;
 	base_attack = -1;
 	base_defense = -1;
+	current_hp = -1;
+	prev_calculated_defense = -1;
 	controler = UINT8_MAX;
 	location = UINT8_MAX;
 	sequence = UINT8_MAX;
@@ -951,6 +953,39 @@ std::pair<int32_t, int32_t> card::get_atk_def() {
 	}
 	ret.first = temp.attack;
 	ret.second = temp.defense;
+	
+	// Shadowverse-style HP management for monsters only
+	// Prevent unreasonable death when defense boosts are removed
+	if (data.type & TYPE_MONSTER && !(data.type & TYPE_LINK)) {
+		// Initialize current_hp when card is first calculated
+		if (current.current_hp < 0) {
+			current.current_hp = ret.second;
+			current.prev_calculated_defense = ret.second;
+		}
+		
+		// If calculated defense decreased from previous, this might be boost removal
+		if (current.prev_calculated_defense > 0 && ret.second < current.prev_calculated_defense) {
+			// Check if this would cause unreasonable death (HP going to 0 or negative)
+			if (ret.second <= 0 && current.current_hp > 0) {
+				// This looks like unreasonable death from boost removal
+				// Apply Shadowverse rule: clamp current HP to at least 1 if it was positive
+				int base_def = get_base_defense();
+				if (base_def > 0) {
+					ret.second = std::min(current.current_hp, base_def);
+					if (ret.second <= 0 && current.current_hp > 0) {
+						ret.second = 1;  // Minimum survival HP
+					}
+				}
+			}
+		}
+		
+		// Update tracking values
+		if (ret.second > 0) {
+			current.current_hp = ret.second;
+		}
+		current.prev_calculated_defense = ret.second;
+	}
+	
 	temp.attack = -1;
 	temp.defense = -1;
 	return ret;

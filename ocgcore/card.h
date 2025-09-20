@@ -50,6 +50,8 @@ struct card_state {
 	int32_t defense{ 0 };
 	int32_t base_attack{ 0 };
 	int32_t base_defense{ 0 };
+	int32_t current_hp{ 0 };  // Shadowverse-style current HP tracking
+	int32_t prev_calculated_defense{ 0 };  // Track previous max defense for boost removal detection
 	uint8_t controler{ PLAYER_NONE };
 	uint8_t location{ 0 };
 	uint8_t sequence{ 0 };
