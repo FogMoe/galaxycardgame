@@ -205,6 +205,17 @@ public:
 	void AddDebugMsg(const char* msgbuf);
 	void initUtils();
 	void InjectEnvToRegistry(intptr_t pduel);
+
+	// 补给管理方法 (服务器模式)
+	void SetSupply(int player, int current, int maximum);
+	void AddSupply(int player, int amount);
+	void SpendSupply(int player, int amount);
+	void IncrementMaxSupply(int player);
+
+	// 基础方法
+	int LocalPlayer(int player) const;
+	int OppositePlayer(int player);
+	int ChatLocalPlayer(int player);
 #else
 	void MainLoop();
 	void RefreshTimeDisplay();
