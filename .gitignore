@@ -71,6 +71,7 @@ build
 # ygopro main program
 /ygopro
 /ygopro_*
+/gcg.exe
 /ygopro.exe
 /ygopro_*.exe
 /ygopro.app
