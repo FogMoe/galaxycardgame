@@ -52,6 +52,10 @@ void DuelInfo::Clear() {
 	lp[0] = 0;
 	lp[1] = 0;
 	start_lp = 0;
+	supply[0] = 1;      // 初始补给为1
+	supply[1] = 1;
+	max_supply[0] = 1;  // 初始最大补给为1
+	max_supply[1] = 1;
 	duel_rule = 0;
 	turn = 0;
 	curMsg = 0;
@@ -61,6 +65,10 @@ void DuelInfo::Clear() {
 	clientname_tag[0] = 0;
 	strLP[0][0] = 0;
 	strLP[1][0] = 0;
+	str_supply[0][0] = 0;
+	str_supply[1][0] = 0;
+	supply_color[0] = 0xffffff40;
+	supply_color[1] = 0xffffff40;
 	player_type = 0;
 	time_player = 0;
 	time_limit = 0;
@@ -259,7 +267,7 @@ bool Game::Initialize() {
 	lpcFont = irr::gui::CGUITTFont::createTTFont(env, gameConf.numfont, 48);
 	guiFont = irr::gui::CGUITTFont::createTTFont(env, gameConf.textfont, gameConf.textfontsize);
 	smgr = device->getSceneManager();
-	device->setWindowCaption(L"KoishiPro");
+	device->setWindowCaption(L"GalaxyCardGame");
 	device->setResizable(true);
 	if(gameConf.window_maximized)
 		device->maximizeWindow();
@@ -273,15 +281,19 @@ bool Game::Initialize() {
 	SetWindowsIcon();
 	//main menu
 	wchar_t strbuf[256];
-	myswprintf(strbuf, L"KoishiPro %X.0%X.%X Memes", (PRO_VERSION & 0xf000U) >> 12, (PRO_VERSION & 0x0ff0U) >> 4, PRO_VERSION & 0x000fU);
-	wMainMenu = env->addWindow(irr::core::rect<irr::s32>(370, 200, 650, 415), false, strbuf);
+	myswprintf(strbuf, L"GalaxyCardGame %X.0%X.%X Beta", (PRO_VERSION & 0xf000U) >> 12, (PRO_VERSION & 0x0ff0U) >> 4, PRO_VERSION & 0x000fU);
+	wMainMenu = env->addWindow(irr::core::rect<irr::s32>(370, 200, 650, 380), false, strbuf); // 减少35像素高度
 	wMainMenu->getCloseButton()->setVisible(false);
 	btnLanMode = env->addButton(irr::core::rect<irr::s32>(10, 30, 270, 60), wMainMenu, BUTTON_LAN_MODE, dataManager.GetSysString(1200));
-	btnSingleMode = env->addButton(irr::core::rect<irr::s32>(10, 65, 270, 95), wMainMenu, BUTTON_SINGLE_MODE, dataManager.GetSysString(1201));
-	btnReplayMode = env->addButton(irr::core::rect<irr::s32>(10, 100, 270, 130), wMainMenu, BUTTON_REPLAY_MODE, dataManager.GetSysString(1202));
+	// 原有单人模式按钮（已隐藏）
+	btnSingleMode = env->addButton(irr::core::rect<irr::s32>(10, 65, 270, 95), wMainMenu, BUTTON_SINGLE_MODE, dataManager.GetSysString(1201)); //单人模式
+	btnSingleMode->setVisible(false); // 隐藏单人模式按钮
+
+	// 调整后的按钮位置（向上移动填补空位）
+	btnReplayMode = env->addButton(irr::core::rect<irr::s32>(10, 65, 270, 95), wMainMenu, BUTTON_REPLAY_MODE, dataManager.GetSysString(1202)); // 移到单人模式位置
 //	btnTestMode = env->addButton(irr::core::rect<irr::s32>(10, 135, 270, 165), wMainMenu, BUTTON_TEST_MODE, dataManager.GetSysString(1203));
-	btnDeckEdit = env->addButton(irr::core::rect<irr::s32>(10, 135, 270, 165), wMainMenu, BUTTON_DECK_EDIT, dataManager.GetSysString(1204));
-	btnModeExit = env->addButton(irr::core::rect<irr::s32>(10, 170, 270, 200), wMainMenu, BUTTON_MODE_EXIT, dataManager.GetSysString(1210));
+	btnDeckEdit = env->addButton(irr::core::rect<irr::s32>(10, 100, 270, 130), wMainMenu, BUTTON_DECK_EDIT, dataManager.GetSysString(1204)); // 向上移动35像素
+	btnModeExit = env->addButton(irr::core::rect<irr::s32>(10, 135, 270, 165), wMainMenu, BUTTON_MODE_EXIT, dataManager.GetSysString(1210)); // 向上移动35像素
 	//lan mode
 	wLanWindow = env->addWindow(irr::core::rect<irr::s32>(220, 100, 800, 520), false, dataManager.GetSysString(1200));
 	wLanWindow->getCloseButton()->setVisible(false);
@@ -1190,7 +1202,7 @@ void Game::MainLoop() {
 		if(cur_time < fps * 17 - 20)
 			std::this_thread::sleep_for(std::chrono::milliseconds(20));
 		if(cur_time >= 1000) {
-			myswprintf(cap, L"KoishiPro FPS: %d", fps);
+			myswprintf(cap, L"GalaxyCardGame FPS: %d", fps);
 			device->setWindowCaption(cap);
 			fps = 0;
 			cur_time -= 1000;
@@ -1459,8 +1471,8 @@ std::vector<std::string> Game::GetExpansionsListU(const char* suffix) {
 #ifndef YGOPRO_SERVER_MODE
 void Game::RefreshCategoryDeck(irr::gui::IGUIComboBox* cbCategory, irr::gui::IGUIComboBox* cbDeck, bool selectlastused) {
 	cbCategory->clear();
-	cbCategory->addItem(dataManager.GetSysString(1450));
-	cbCategory->addItem(dataManager.GetSysString(1451));
+	// cbCategory->addItem(dataManager.GetSysString(1450));
+	// cbCategory->addItem(dataManager.GetSysString(1451));
 	cbCategory->addItem(dataManager.GetSysString(1452));
 	cbCategory->addItem(dataManager.GetSysString(1453));
 	FileSystem::TraversalDir(L"./deck", [cbCategory](const wchar_t* name, bool isdir) {
@@ -1468,7 +1480,7 @@ void Game::RefreshCategoryDeck(irr::gui::IGUIComboBox* cbCategory, irr::gui::IGU
 			cbCategory->addItem(name);
 		}
 	});
-	cbCategory->setSelected(2);
+	cbCategory->setSelected(0);
 	if(selectlastused) {
 		for(size_t i = 0; i < cbCategory->getItemCount(); ++i) {
 			if(!std::wcscmp(cbCategory->getItem(i), gameConf.lastcategory)) {
@@ -2403,7 +2415,7 @@ void Game::OnResize() {
 	imageManager.ClearTexture();
 	imageManager.ResizeTexture();
 
-	wMainMenu->setRelativePosition(ResizeWin(370, 200, 650, 415));
+	wMainMenu->setRelativePosition(ResizeWin(370, 200, 650, 380)); // 减少35像素高度
 	wDeckEdit->setRelativePosition(Resize(309, 5, 605, 130));
 	cbDBDecks->setRelativePosition(Resize(80, 35, 220, 60));
 	btnClearDeck->setRelativePosition(Resize(115, 99, 165, 120));
@@ -2801,6 +2813,41 @@ void Game::InjectEnvToRegistry(intptr_t pduel) {
 		}
 	}
 #endif
+}
+
+// 补给管理方法实现
+void Game::SetSupply(int player, int current, int maximum) {
+	if(player < 0 || player >= 2) return;
+	dInfo.supply[player] = current;
+	dInfo.max_supply[player] = maximum;
+	// 照搬LP模式，直接更新字符串
+	myswprintf(dInfo.str_supply[player], L"%d/%d", dInfo.supply[player], dInfo.max_supply[player]);
+	dInfo.supply_color[player] = dInfo.supply[player] >= dInfo.max_supply[player] ? 0xff40ff40 : 0xffffff40;
+}
+
+void Game::AddSupply(int player, int amount) {
+	if(player < 0 || player >= 2) return;
+	dInfo.supply[player] = std::min(dInfo.supply[player] + amount, dInfo.max_supply[player]);
+	// 照搬LP模式，直接更新字符串
+	myswprintf(dInfo.str_supply[player], L"%d/%d", dInfo.supply[player], dInfo.max_supply[player]);
+	dInfo.supply_color[player] = dInfo.supply[player] >= dInfo.max_supply[player] ? 0xff40ff40 : 0xffffff40;
+}
+
+void Game::SpendSupply(int player, int amount) {
+	if(player < 0 || player >= 2) return;
+	dInfo.supply[player] = std::max(0, dInfo.supply[player] - amount);
+	// 照搬LP模式，直接更新字符串
+	myswprintf(dInfo.str_supply[player], L"%d/%d", dInfo.supply[player], dInfo.max_supply[player]);
+	dInfo.supply_color[player] = dInfo.supply[player] >= dInfo.max_supply[player] ? 0xff40ff40 : 0xffffff40;
+}
+
+void Game::IncrementMaxSupply(int player) {
+	if(player < 0 || player >= 2) return;
+	dInfo.max_supply[player] = std::min(10, dInfo.max_supply[player] + 1);  // 最大补给上限为10
+	dInfo.supply[player] = dInfo.max_supply[player];  // 每回合补给满额
+	// 照搬LP模式，直接更新字符串
+	myswprintf(dInfo.str_supply[player], L"%d/%d", dInfo.supply[player], dInfo.max_supply[player]);
+	dInfo.supply_color[player] = dInfo.supply[player] >= dInfo.max_supply[player] ? 0xff40ff40 : 0xffffff40;
 }
 
 }

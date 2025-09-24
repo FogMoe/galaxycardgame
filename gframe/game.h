@@ -138,6 +138,8 @@ struct DuelInfo {
 	bool isReplaySwapped{ false };
 	int lp[2]{};
 	int start_lp{ 0 };
+	int supply[2]{};        // 当前补给值
+	int max_supply[2]{};    // 最大补给值
 	int card_count[2]{};
 	int total_attack[2]{};
 	int duel_rule{ 0 };
@@ -157,8 +159,10 @@ struct DuelInfo {
 	video::SColor time_color[2]{};
 	wchar_t str_card_count[2][16]{};
 	wchar_t str_total_attack[2][16]{};
+	wchar_t str_supply[2][16]{};        // 补给显示字符串 "当前/最大"
 	video::SColor card_count_color[2]{};
 	video::SColor total_attack_color[2]{};
+	video::SColor supply_color[2]{};
 	std::vector<unsigned int> announce_cache;
 
 	void Clear();
@@ -258,6 +262,12 @@ public:
 	int LocalPlayer(int player) const;
 	int OppositePlayer(int player);
 	int ChatLocalPlayer(int player);
+
+	// 补给管理方法
+	void SetSupply(int player, int current, int maximum);
+	void AddSupply(int player, int amount);
+	void SpendSupply(int player, int amount);
+	void IncrementMaxSupply(int player);
 	const wchar_t* LocalName(int local_player);
 	const char* GetLocaleDir(const char* dir);
 	const wchar_t* GetLocaleDirWide(const char* dir);

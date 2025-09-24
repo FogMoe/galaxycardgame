@@ -652,6 +652,10 @@ void Game::DrawMisc() {
 	DrawShadowText(numFont, dInfo.strLP[0], Resize(330, 12, 631, 30), Resize(0, 1, 2, 0), 0xffffff00, 0xff000000, true, false, 0);
 	DrawShadowText(numFont, dInfo.strLP[1], Resize(691, 12, 992, 30), Resize(0, 1, 2, 0), 0xffffff00, 0xff000000, true, false, 0);
 
+	// 补给显示 (靠近用户名区域)
+	DrawShadowText(numFont, dInfo.str_supply[0], Resize(330, 50, 631, 68), Resize(0, 1, 2, 0), dInfo.supply_color[0], 0xff000000, true, false, 0);
+	DrawShadowText(numFont, dInfo.str_supply[1], Resize(691, 50, 992, 68), Resize(0, 1, 2, 0), dInfo.supply_color[1], 0xff000000, true, false, 0);
+
 	if(!gameConf.hide_player_name) {
 		irr::core::recti p1size = Resize(335, 31, 629, 50);
 		irr::core::recti p2size = Resize(986, 31, 986, 50);

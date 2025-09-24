@@ -9,19 +9,19 @@
 #include "bufferio.h"
 
 #ifndef YGOPRO_MAX_DECK
-#define YGOPRO_MAX_DECK					60
+#define YGOPRO_MAX_DECK					40
 #endif
 
 #ifndef YGOPRO_MIN_DECK
-#define YGOPRO_MIN_DECK					40
+#define YGOPRO_MIN_DECK					30
 #endif
 
 #ifndef YGOPRO_MAX_EXTRA
-#define YGOPRO_MAX_EXTRA					15
+#define YGOPRO_MAX_EXTRA					10
 #endif
 
 #ifndef YGOPRO_MAX_SIDE
-#define YGOPRO_MAX_SIDE					15
+#define YGOPRO_MAX_SIDE					0
 #endif
 
 namespace ygo {

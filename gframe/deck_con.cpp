@@ -227,7 +227,7 @@ bool DeckBuilder::OnEvent(const irr::SEvent& event) {
 					mainGame->PopupElement(mainGame->wACMessage, 20);
 					is_modified = false;
 					if(catesel == -1) {
-						catesel = 2;
+						catesel = 0;
 						prev_category = catesel;
 						RefreshReadonly(catesel);
 						mainGame->cbDBCategory->setSelected(catesel);
@@ -412,9 +412,9 @@ bool DeckBuilder::OnEvent(const irr::SEvent& event) {
 				mainGame->cbDMCategory->setVisible(true);
 				mainGame->cbDMCategory->clear();
 				int catesel = mainGame->lstCategories->getSelected();
-				if(catesel != 2)
+				if(catesel != 0)
 					mainGame->cbDMCategory->addItem(dataManager.GetSysString(1452));
-				for(int i = 4; i < (int)mainGame->lstCategories->getItemCount(); i++) {
+				for(int i = 2; i < (int)mainGame->lstCategories->getItemCount(); i++) {
 					if(i != catesel)
 						mainGame->cbDMCategory->addItem(mainGame->lstCategories->getListItem(i));
 				}
@@ -429,9 +429,9 @@ bool DeckBuilder::OnEvent(const irr::SEvent& event) {
 				mainGame->cbDMCategory->setVisible(true);
 				mainGame->cbDMCategory->clear();
 				int catesel = mainGame->lstCategories->getSelected();
-				if(catesel != 2)
+				if(catesel != 0)
 					mainGame->cbDMCategory->addItem(dataManager.GetSysString(1452));
-				for(int i = 4; i < (int)mainGame->lstCategories->getItemCount(); i++) {
+				for(int i = 2; i < (int)mainGame->lstCategories->getItemCount(); i++) {
 					if(i != catesel)
 						mainGame->cbDMCategory->addItem(mainGame->lstCategories->getListItem(i));
 				}
@@ -473,7 +473,7 @@ bool DeckBuilder::OnEvent(const irr::SEvent& event) {
 						mainGame->lstCategories->addItem(catename);
 						catesel = mainGame->lstCategories->getItemCount() - 1;
 					} else {
-						for(int i = DECK_CATEGORY_CUSTOM; i < (int)mainGame->lstCategories->getItemCount(); i++) {
+						for(int i = 2; i < (int)mainGame->lstCategories->getItemCount(); i++) {
 							if(!mywcsncasecmp(mainGame->lstCategories->getListItem(i), catename, 256)) {
 								catesel = i;
 								mainGame->stACMessage->setText(dataManager.GetSysString(1474));
@@ -493,7 +493,7 @@ bool DeckBuilder::OnEvent(const irr::SEvent& event) {
 				}
 				case BUTTON_RENAME_CATEGORY: {
 					int catesel = mainGame->lstCategories->getSelected();
-					if (catesel < DECK_CATEGORY_CUSTOM)
+					if (catesel < 2)
 						break;
 					const wchar_t* oldcatename = mainGame->lstCategories->getListItem(catesel);
 					const wchar_t* newcatename = mainGame->ebDMName->getText();
@@ -505,7 +505,7 @@ bool DeckBuilder::OnEvent(const irr::SEvent& event) {
 						catesel = mainGame->lstCategories->getItemCount() - 1;
 					} else {
 						catesel = 0;
-						for(int i = DECK_CATEGORY_CUSTOM; i < (int)mainGame->lstCategories->getItemCount(); i++) {
+						for(int i = 2; i < (int)mainGame->lstCategories->getItemCount(); i++) {
 							if(!mywcsncasecmp(mainGame->lstCategories->getListItem(i), newcatename, 256)) {
 								catesel = i;
 								mainGame->stACMessage->setText(dataManager.GetSysString(1474));
@@ -525,7 +525,7 @@ bool DeckBuilder::OnEvent(const irr::SEvent& event) {
 				}
 				case BUTTON_DELETE_CATEGORY: {
 					int catesel = mainGame->lstCategories->getSelected();
-					if (catesel < DECK_CATEGORY_CUSTOM)
+					if (catesel < 2)
 						break;
 					const wchar_t* catename = mainGame->lstCategories->getListItem(catesel);
 					if(DeckManager::DeleteCategory(catename)) {
@@ -592,7 +592,7 @@ bool DeckBuilder::OnEvent(const irr::SEvent& event) {
 					get_deck_file(oldfilepath);
 					const wchar_t* newdeckname = mainGame->ebDMName->getText();
 					wchar_t newfilepath[256];
-					if(catesel == 2) {
+					if(catesel == 0) {
 						myswprintf(newfilepath, L"./deck/%ls.ydk", newdeckname);
 					} else {
 						myswprintf(newfilepath, L"./deck/%ls/%ls.ydk", catename, newdeckname);
@@ -653,7 +653,7 @@ bool DeckBuilder::OnEvent(const irr::SEvent& event) {
 					wchar_t oldfilepath[256];
 					get_deck_file(oldfilepath);
 					wchar_t newfilepath[256];
-					if(oldcatesel != 2 && newcatesel == 0) {
+					if(oldcatesel != 0 && newcatesel == 0) {
 						myswprintf(newfilepath, L"./deck/%ls.ydk", deckname);
 					} else {
 						myswprintf(newfilepath, L"./deck/%ls/%ls.ydk", newcatename, deckname);
@@ -691,7 +691,7 @@ bool DeckBuilder::OnEvent(const irr::SEvent& event) {
 					wchar_t deckname[256];
 					BufferIO::CopyWideString(olddeckname, deckname);
 					wchar_t newfilepath[256];
-					if(oldcatesel != 2 && newcatesel == 0) {
+					if(oldcatesel != 0 && newcatesel == 0) {
 						myswprintf(newfilepath, L"./deck/%ls.ydk", deckname);
 					} else {
 						myswprintf(newfilepath, L"./deck/%ls/%ls.ydk", newcatename, deckname);
@@ -905,10 +905,10 @@ bool DeckBuilder::OnEvent(const irr::SEvent& event) {
 					break;
 				}
 				int catesel = mainGame->cbDBCategory->getSelected();
-				if(catesel == 3) {
-					catesel = 2;
-					mainGame->cbDBCategory->setSelected(2);
-					if(prev_category == 2)
+				if(catesel == 1) {
+					catesel = 0;
+					mainGame->cbDBCategory->setSelected(0);
+					if(prev_category == 0)
 						break;
 				}
 				if(is_modified && !readonly && !mainGame->chkIgnoreDeckChanges->isChecked()) {
@@ -1071,8 +1071,8 @@ bool DeckBuilder::OnEvent(const irr::SEvent& event) {
 					break;
 				}
 				int catesel = mainGame->lstCategories->getSelected();
-				if(catesel == 3) {
-					catesel = 2;
+				if(catesel == 1) {
+					catesel = 0;
 					mainGame->lstCategories->setSelected(catesel);
 					if(prev_category == catesel)
 						break;
@@ -1583,6 +1583,12 @@ void DeckBuilder::FilterCards() {
 			continue;
 		if(filter_marks && (data.link_marker & filter_marks) != filter_marks)
 			continue;
+		// 默认排除custom和TCG卡片，除非明确选择对应筛选（原来在filter_lm==0时会显示所有卡片包括custom和TCG）
+		if(filter_lm != 7 && filter_lm != 5 && (data.ot & AVAIL_CUSTOM) && !(data.ot & ~AVAIL_CUSTOM))
+			continue;
+		if(filter_lm != 5 && (data.ot & AVAIL_TCG) && !(data.ot & ~AVAIL_TCG))
+			continue;
+
 		if(filter_lm) {
 			if(filter_lm <= 3 && (!filterList->content.count(ptr->first) || filterList->content.at(ptr->first) != filter_lm - 1))
 				continue;
@@ -1708,8 +1714,8 @@ void DeckBuilder::RefreshDeckList() {
 }
 void DeckBuilder::RefreshReadonly(int catesel) {
 	bool hasDeck = mainGame->cbDBDecks->getItemCount() != 0;
-	readonly = catesel < 2;
-	showing_pack = catesel == 0;
+	readonly = catesel < 0;  // 现在1452是索引0，所以没有只读分类
+	showing_pack = false;    // 不再显示卡包模式
 	mainGame->btnSaveDeck->setEnabled(!readonly);
 	mainGame->btnSaveDeckAs->setEnabled(!readonly);
 	mainGame->btnClearDeck->setEnabled(!readonly);
