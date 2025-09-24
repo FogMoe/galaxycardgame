@@ -2817,37 +2817,63 @@ void Game::InjectEnvToRegistry(intptr_t pduel) {
 
 // 补给管理方法实现
 void Game::SetSupply(int player, int current, int maximum) {
+#ifdef YGOPRO_SERVER_MODE
+	// 服务器模式：只更新核心数据
 	if(player < 0 || player >= 2) return;
 	dInfo.supply[player] = current;
 	dInfo.max_supply[player] = maximum;
-	// 照搬LP模式，直接更新字符串
+#else
+	// 客户端模式：更新数据和UI
+	if(player < 0 || player >= 2) return;
+	dInfo.supply[player] = current;
+	dInfo.max_supply[player] = maximum;
 	myswprintf(dInfo.str_supply[player], L"%d/%d", dInfo.supply[player], dInfo.max_supply[player]);
 	dInfo.supply_color[player] = dInfo.supply[player] >= dInfo.max_supply[player] ? 0xff40ff40 : 0xffffff40;
+#endif
 }
 
 void Game::AddSupply(int player, int amount) {
+#ifdef YGOPRO_SERVER_MODE
+	// 服务器模式：只更新核心数据
 	if(player < 0 || player >= 2) return;
 	dInfo.supply[player] = std::min(dInfo.supply[player] + amount, dInfo.max_supply[player]);
-	// 照搬LP模式，直接更新字符串
+#else
+	// 客户端模式：更新数据和UI
+	if(player < 0 || player >= 2) return;
+	dInfo.supply[player] = std::min(dInfo.supply[player] + amount, dInfo.max_supply[player]);
 	myswprintf(dInfo.str_supply[player], L"%d/%d", dInfo.supply[player], dInfo.max_supply[player]);
 	dInfo.supply_color[player] = dInfo.supply[player] >= dInfo.max_supply[player] ? 0xff40ff40 : 0xffffff40;
+#endif
 }
 
 void Game::SpendSupply(int player, int amount) {
+#ifdef YGOPRO_SERVER_MODE
+	// 服务器模式：只更新核心数据
 	if(player < 0 || player >= 2) return;
 	dInfo.supply[player] = std::max(0, dInfo.supply[player] - amount);
-	// 照搬LP模式，直接更新字符串
+#else
+	// 客户端模式：更新数据和UI
+	if(player < 0 || player >= 2) return;
+	dInfo.supply[player] = std::max(0, dInfo.supply[player] - amount);
 	myswprintf(dInfo.str_supply[player], L"%d/%d", dInfo.supply[player], dInfo.max_supply[player]);
 	dInfo.supply_color[player] = dInfo.supply[player] >= dInfo.max_supply[player] ? 0xff40ff40 : 0xffffff40;
+#endif
 }
 
 void Game::IncrementMaxSupply(int player) {
+#ifdef YGOPRO_SERVER_MODE
+	// 服务器模式：只更新核心数据
 	if(player < 0 || player >= 2) return;
 	dInfo.max_supply[player] = std::min(10, dInfo.max_supply[player] + 1);  // 最大补给上限为10
 	dInfo.supply[player] = dInfo.max_supply[player];  // 每回合补给满额
-	// 照搬LP模式，直接更新字符串
+#else
+	// 客户端模式：更新数据和UI
+	if(player < 0 || player >= 2) return;
+	dInfo.max_supply[player] = std::min(10, dInfo.max_supply[player] + 1);  // 最大补给上限为10
+	dInfo.supply[player] = dInfo.max_supply[player];  // 每回合补给满额
 	myswprintf(dInfo.str_supply[player], L"%d/%d", dInfo.supply[player], dInfo.max_supply[player]);
 	dInfo.supply_color[player] = dInfo.supply[player] >= dInfo.max_supply[player] ? 0xff40ff40 : 0xffffff40;
+#endif
 }
 
 }

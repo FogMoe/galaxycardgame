@@ -20,6 +20,42 @@
 #include <ctime>
 #else
 #include "netserver.h"
+
+// 服务器模式的简化结构体 (只包含游戏逻辑，忽略UI)
+struct Config {
+	// 空的Config结构体，服务器模式不需要配置
+};
+
+struct DuelInfo {
+	int supply[2]{};        // 当前补给值
+	int max_supply[2]{};    // 最大补给值
+
+	void Clear() {
+		supply[0] = 1; supply[1] = 1;
+		max_supply[0] = 1; max_supply[1] = 1;
+	}
+};
+
+struct BotInfo {
+	wchar_t name[256]{};
+	wchar_t command[256]{};
+	wchar_t desc[256]{};
+	bool support_master_rule_3{ false };
+	bool support_new_master_rule{ false };
+	bool support_master_rule_2020{ false };
+	bool select_deckfile{ false };
+};
+
+struct FadingUnit {
+	// 服务器模式不需要UI相关的fading效果
+	int dummy{};
+};
+
+struct Signal {
+	// 简化的Signal结构体
+	int value{};
+};
+
 #endif //YGOPRO_SERVER_MODE
 #include <unordered_map>
 #include <vector>
