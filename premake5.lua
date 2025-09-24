@@ -86,6 +86,13 @@ newoption { trigger = 'build-ikpmp3', category = "YGOPro - irrklang - ikpmp3", d
 newoption { trigger = "mac-arm", category = "YGOPro", description = "Compile for Apple Silicon Mac" }
 newoption { trigger = "mac-intel", category = "YGOPro", description = "Compile for Intel Mac" }
 
+-- Steam support options
+ENABLE_STEAM_SUPPORT = false -- Default: disabled to maintain GPL compliance
+
+newoption { trigger = "enable-steam-support", category = "YGOPro - Steam", description = "Enable Steam networking support (requires Steam client)" }
+newoption { trigger = "no-steam-support", category = "YGOPro - Steam", description = "Disable Steam networking support" }
+newoption { trigger = "steam-app-id", category = "YGOPro - Steam", description = "Steam Application ID", value = "APPID", default = "0" }
+
 -- koishipro specific
 
 boolOptions = {
@@ -293,6 +300,15 @@ if USE_AUDIO then
         error("Unknown audio library: " .. AUDIO_LIB)
     end
 end
+
+-- Steam support configuration
+if GetParam("enable-steam-support") then
+    ENABLE_STEAM_SUPPORT = true
+elseif GetParam("no-steam-support") then
+    ENABLE_STEAM_SUPPORT = false
+end
+
+STEAM_APP_ID = GetParam("steam-app-id") or "0"
 
 IS_ARM=false
 

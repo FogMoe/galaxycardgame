@@ -7,6 +7,13 @@ project "YGOPro"
     openmp "On"
 
     files { "*.cpp", "*.h", "CGUISkinSystem/*.cpp", "CGUISkinSystem/*.h", "CXMLRegistry/*.cpp", "CXMLRegistry/*.h" }
+
+    -- Steam support files (conditionally included)
+    if ENABLE_STEAM_SUPPORT then
+        files { "steam/*.cpp", "steam/*.h" }
+        defines { "YGOPRO_ENABLE_STEAM_SUPPORT", "YGOPRO_STEAM_APP_ID=" .. STEAM_APP_ID }
+    end
+
     includedirs { "../ocgcore" }
     links { "ocgcore", "clzma", "cspmemvfs", LUA_LIB_NAME, "sqlite3", "irrlicht", "freetype", "event" }
 
