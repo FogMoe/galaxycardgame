@@ -252,6 +252,9 @@ public:
 	int LocalPlayer(int player) const;
 	int OppositePlayer(int player);
 	int ChatLocalPlayer(int player);
+
+	// 服务器模式的成员变量
+	DuelInfo dInfo;
 #else
 	void MainLoop();
 	void RefreshTimeDisplay();
