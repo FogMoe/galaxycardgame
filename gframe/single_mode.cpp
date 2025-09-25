@@ -612,6 +612,11 @@ bool SingleMode::SinglePlayAnalyze(unsigned char* msg, unsigned int len) {
 			DuelClient::ClientAnalyze(offset, pbuf - offset);
 			break;
 		}
+		case MSG_SUPPLY_UPDATE: {
+			pbuf += 9;
+			DuelClient::ClientAnalyze(offset, pbuf - offset);
+			break;
+		}
 		case MSG_UNEQUIP: {
 			pbuf += 4;
 			DuelClient::ClientAnalyze(offset, pbuf - offset);
