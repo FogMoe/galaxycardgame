@@ -1,0 +1,45 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Dependency directories
+node_modules/
+bower_components/
+
+# Coverage and build output
+coverage/
+.nyc_output/
+dist/
+build/
+
+# Caches
+.eslintcache
+.stylelintcache
+.rpt2_cache/
+.rts2_cache_*/
+.cache/
+.parcel-cache/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# IDE / editor files
+.vscode/
+.idea/
+
+# System files
+.DS_Store
+Thumbs.db

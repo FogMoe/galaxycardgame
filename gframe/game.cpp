@@ -339,6 +339,7 @@ bool Game::Initialize() {
 	ebServerPass = env->addEditBox(L"", irr::core::rect<irr::s32>(110, 385, 250, 410), true, wCreateHost);
 	ebServerPass->setTextAlignment(irr::gui::EGUIA_CENTER, irr::gui::EGUIA_CENTER);
 	editbox_list.push_back(ebServerPass);
+	chkRoomListPublish = env->addCheckBox(gameConf.roomlist_publish, irr::core::rect<irr::s32>(260, 415, 460, 440), wCreateHost, CHECKBOX_ROOMLIST_PUBLISH, L"列入房间列表");
 	btnHostConfirm = env->addButton(irr::core::rect<irr::s32>(260, 355, 370, 380), wCreateHost, BUTTON_HOST_CONFIRM, dataManager.GetSysString(1211));
 	btnHostCancel = env->addButton(irr::core::rect<irr::s32>(260, 385, 370, 410), wCreateHost, BUTTON_HOST_CANCEL, dataManager.GetSysString(1212));
 	//host(single)
@@ -377,10 +378,15 @@ bool Game::Initialize() {
 	wServerList->getCloseButton()->setVisible(false);
 	wServerList->setVisible(false);
 	wServerList->setDraggable(true);
-	lstServerList = env->addListBox(irr::core::rect<irr::s32>(10, 20, 290, 270), wServerList, LISTBOX_SERVER_LIST, true);
+	lstServerList = env->addListBox(irr::core::rect<irr::s32>(10, 20, 290, 220), wServerList, LISTBOX_SERVER_LIST, true);
 	lstServerList->setItemHeight(18);
+	env->addStaticText(L"房间列表服务器", irr::core::rect<irr::s32>(10, 230, 290, 250), false, false, wServerList);
+	ebRoomListServer = env->addEditBox(gameConf.roomlist_server, irr::core::rect<irr::s32>(10, 250, 290, 275), true, wServerList);
+	env->addStaticText(L"公共地址", irr::core::rect<irr::s32>(10, 280, 290, 300), false, false, wServerList);
+	ebRoomListPublic = env->addEditBox(gameConf.roomlist_public_host, irr::core::rect<irr::s32>(10, 300, 290, 325), true, wServerList);
+	btnRoomListApply = env->addButton(irr::core::rect<irr::s32>(10, 330, 140, 355), wServerList, BUTTON_ROOMLIST_APPLY, L"保存");
+	btnServerReturn = env->addButton(irr::core::rect<irr::s32>(160, 330, 290, 355), wServerList, BUTTON_SERVER_RETURN, dataManager.GetSysString(1210));
 	RefreshServerList();
-	btnServerReturn = env->addButton(irr::core::rect<irr::s32>(100, 280, 200, 310), wServerList, BUTTON_SERVER_RETURN, dataManager.GetSysString(1210));
 	//img
 	wCardImg = env->addStaticText(L"", irr::core::rect<irr::s32>(1, 1, 1 + CARD_IMG_WIDTH + 20, 1 + CARD_IMG_HEIGHT + 18), true, false, 0, -1, true);
 	wCardImg->setBackgroundColor(0xc0c0c0c0);
@@ -1564,10 +1570,36 @@ void Game::RefreshBot() {
 	}
 }
 void Game::RefreshServerList() {
-	lstServerList->clear();
-	for (const auto& pair : dataManager._serverStrings) {
-		const wchar_t* key = pair.first.c_str();
-		lstServerList->addItem(key);
+	std::vector<RoomListEntry> remote;
+	std::wstring fetchError;
+	if(gameConf.roomlist_enabled && roomListClient.FetchRooms(remote, fetchError)) {
+		std::vector<std::pair<std::wstring, std::wstring>> synced;
+		synced.reserve(remote.size());
+		for(auto& entry : remote) {
+			std::wstring display = entry.name;
+			if(!entry.endpoint.empty()) {
+				display += L" (";
+				display += entry.endpoint;
+				display += L")";
+			}
+			if(!entry.note.empty()) {
+				display += L" - ";
+				display += entry.note;
+			}
+			synced.emplace_back(std::move(display), entry.endpoint);
+		}
+		dataManager.ReplaceServerList(synced);
+	} else if(!gameConf.roomlist_enabled) {
+		dataManager.ReplaceServerList({});
+	} else if(!fetchError.empty()) {
+		ErrorLog("[room-list] fetch rooms failed");
+	}
+	if(lstServerList) {
+		lstServerList->clear();
+		for(const auto& pair : dataManager._serverStrings) {
+			const wchar_t* key = pair.first.c_str();
+			lstServerList->addItem(key);
+		}
 	}
 }
 bool Game::LoadConfigFromFile(const char* file) {
@@ -1600,8 +1632,16 @@ bool Game::LoadConfigFromFile(const char* file) {
 			enable_log = val & 0xff;
 		} else if(!std::strcmp(strbuf, "serverport")) {
 			gameConf.serverport = std::strtol(valbuf, nullptr, 10);
-		} else if(!std::strcmp(strbuf, "lasthost")) {
-			BufferIO::DecodeUTF8(valbuf, gameConf.lasthost);
+	} else if(!std::strcmp(strbuf, "lasthost")) {
+		BufferIO::DecodeUTF8(valbuf, gameConf.lasthost);
+	} else if(!std::strcmp(strbuf, "roomlist_server")) {
+		BufferIO::DecodeUTF8(valbuf, gameConf.roomlist_server);
+	} else if(!std::strcmp(strbuf, "roomlist_public_host")) {
+		BufferIO::DecodeUTF8(valbuf, gameConf.roomlist_public_host);
+	} else if(!std::strcmp(strbuf, "roomlist_enabled")) {
+		gameConf.roomlist_enabled = std::strtol(valbuf, nullptr, 10) > 0;
+	} else if(!std::strcmp(strbuf, "roomlist_publish")) {
+		gameConf.roomlist_publish = std::strtol(valbuf, nullptr, 10) > 0;
 		} else if(!std::strcmp(strbuf, "lastport")) {
 			// for migration
 			auto old_lastport = std::strtol(valbuf, nullptr, 10);
@@ -1749,6 +1789,10 @@ void Game::LoadConfig() {
 	gameConf.textfont[0] = 0;
 	gameConf.lasthost[0] = 0;
 	gameConf.roompass[0] = 0;
+	gameConf.roomlist_server[0] = 0;
+	gameConf.roomlist_public_host[0] = 0;
+	gameConf.roomlist_enabled = false;
+	gameConf.roomlist_publish = true;
 	//settings
 	gameConf.chkMAutoPos = 0;
 	gameConf.chkSTAutoPos = 1;
@@ -1853,6 +1897,10 @@ void Game::LoadConfig() {
 		//SaveConfig();
 #endif
 	}
+	if(!gameConf.roomlist_server[0])
+		gameConf.roomlist_enabled = false;
+	roomListClient.Configure(gameConf.roomlist_server, gameConf.roomlist_enabled);
+	roomListClient.UpdatePublicHost(gameConf.roomlist_public_host);
 }
 void Game::SaveConfig() {
 #ifdef YGOPRO_COMPAT_MYCARD
@@ -1888,6 +1936,12 @@ void Game::SaveConfig() {
 	std::fprintf(fp, "lasthost = %s\n", linebuf);
 	BufferIO::EncodeUTF8(gameConf.roompass, linebuf);
 	std::fprintf(fp, "roompass = %s\n", linebuf);
+	BufferIO::EncodeUTF8(gameConf.roomlist_server, linebuf);
+	std::fprintf(fp, "roomlist_server = %s\n", linebuf);
+	BufferIO::EncodeUTF8(gameConf.roomlist_public_host, linebuf);
+	std::fprintf(fp, "roomlist_public_host = %s\n", linebuf);
+	std::fprintf(fp, "roomlist_enabled = %d\n", gameConf.roomlist_enabled ? 1 : 0);
+	std::fprintf(fp, "roomlist_publish = %d\n", gameConf.roomlist_publish ? 1 : 0);
 	//settings
 	std::fprintf(fp, "automonsterpos = %d\n", (chkMAutoPos->isChecked() ? 1 : 0));
 	std::fprintf(fp, "autospellpos = %d\n", (chkSTAutoPos->isChecked() ? 1 : 0));

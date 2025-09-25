@@ -4,6 +4,7 @@
 #include "netserver.h"
 #include "duelclient.h"
 #include "deck_manager.h"
+#include "data_manager.h"
 #include "replay_mode.h"
 #include "single_mode.h"
 #include "image_manager.h"
@@ -112,11 +113,16 @@ bool MenuHandler::OnEvent(const irr::SEvent& event) {
 				mainGame->HideElement(mainGame->wLanWindow);
 				mainGame->HideElement(mainGame->wServerList);
 				mainGame->ShowElement(mainGame->wCreateHost);
+				if(mainGame->chkRoomListPublish)
+					mainGame->chkRoomListPublish->setChecked(mainGame->gameConf.roomlist_publish);
 				break;
 			}
 			case BUTTON_HOST_CONFIRM: {
 				bot_mode = false;
 				BufferIO::CopyWideString(mainGame->ebServerName->getText(), mainGame->gameConf.gamename);
+				BufferIO::CopyWideString(mainGame->ebServerPass->getText(), mainGame->gameConf.roompass);
+				if(mainGame->chkRoomListPublish)
+					mainGame->gameConf.roomlist_publish = mainGame->chkRoomListPublish->isChecked();
 				if(!NetServer::StartServer(mainGame->gameConf.serverport)) {
 					soundManager.PlaySoundEffect(SOUND_INFO);
 					mainGame->env->addMessageBox(L"", dataManager.GetSysString(1402));
@@ -128,11 +134,16 @@ bool MenuHandler::OnEvent(const irr::SEvent& event) {
 					mainGame->env->addMessageBox(L"", dataManager.GetSysString(1402));
 					break;
 				}
+				if(mainGame->gameConf.roomlist_publish)
+					mainGame->roomListClient.RegisterRoom(mainGame->gameConf.gamename, mainGame->gameConf.serverport);
+				mainGame->SaveConfig();
 				mainGame->btnHostConfirm->setEnabled(false);
 				mainGame->btnHostCancel->setEnabled(false);
 				break;
 			}
 			case BUTTON_HOST_CANCEL: {
+				NetServer::StopServer();
+				mainGame->roomListClient.UnregisterRoom();
 				mainGame->btnCreateHost->setEnabled(true);
 				mainGame->btnJoinHost->setEnabled(true);
 				mainGame->btnJoinCancel->setEnabled(true);
@@ -505,8 +516,31 @@ bool MenuHandler::OnEvent(const irr::SEvent& event) {
 				break;
 			}
 			case BUTTON_SERVER_LIST: {
+				if(mainGame->ebRoomListServer)
+					mainGame->ebRoomListServer->setText(mainGame->gameConf.roomlist_server);
+				if(mainGame->ebRoomListPublic)
+					mainGame->ebRoomListPublic->setText(mainGame->gameConf.roomlist_public_host);
+				mainGame->RefreshServerList();
 				mainGame->ShowElement(mainGame->wServerList);
 				mainGame->PopupElement(mainGame->wServerList);
+				break;
+			}
+			case BUTTON_ROOMLIST_APPLY: {
+				if(mainGame->ebRoomListServer)
+					BufferIO::CopyWideString(mainGame->ebRoomListServer->getText(), mainGame->gameConf.roomlist_server);
+				if(mainGame->ebRoomListPublic)
+					BufferIO::CopyWideString(mainGame->ebRoomListPublic->getText(), mainGame->gameConf.roomlist_public_host);
+				mainGame->gameConf.roomlist_enabled = mainGame->gameConf.roomlist_server[0] != 0;
+				mainGame->roomListClient.Configure(mainGame->gameConf.roomlist_server, mainGame->gameConf.roomlist_enabled);
+				mainGame->roomListClient.UpdatePublicHost(mainGame->gameConf.roomlist_public_host);
+				if(mainGame->gameConf.roomlist_enabled)
+					mainGame->RefreshServerList();
+				else {
+					dataManager.ReplaceServerList({});
+					if(mainGame->lstServerList)
+						mainGame->lstServerList->clear();
+				}
+				mainGame->SaveConfig();
 				break;
 			}
 			case BUTTON_SERVER_RETURN: {

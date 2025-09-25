@@ -76,6 +76,7 @@ public:
 	void ReadCorresSrvIniLine(const char* linebuf);
 	std::wstring GetINIValue(const char* line, const char* key);
 	void InsertServerList();
+	void ReplaceServerList(const std::vector<std::pair<std::wstring, std::wstring>>& list);
 	bool Error(sqlite3* pDB, sqlite3_stmt* pStmt = nullptr);
 
 	code_pointer GetCodePointer(uint32_t code) const;

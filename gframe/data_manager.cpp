@@ -326,6 +326,10 @@ void DataManager::InsertServerList() {
 	iniHost.clear();
 	iniPort.clear();
 }
+
+void DataManager::ReplaceServerList(const std::vector<std::pair<std::wstring, std::wstring>>& list) {
+	_serverStrings = list;
+}
 bool DataManager::Error(sqlite3* pDB, sqlite3_stmt* pStmt) {
 	if (const char* msg = sqlite3_errmsg(pDB))
 		mysnprintf(errmsg, "%s", msg);

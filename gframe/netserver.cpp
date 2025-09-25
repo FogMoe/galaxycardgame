@@ -3,6 +3,7 @@
 #include "single_duel.h"
 #include "tag_duel.h"
 #include "deck_manager.h"
+#include "game.h"
 #include <thread>
 
 namespace ygo {
@@ -63,6 +64,8 @@ void NetServer::StopServer() {
 		return;
 	if(duel_mode)
 		duel_mode->EndDuel();
+	if(mainGame)
+		mainGame->roomListClient.UnregisterRoom();
 	event_base_loopexit(net_evbase, 0);
 }
 void NetServer::StopBroadcast() {

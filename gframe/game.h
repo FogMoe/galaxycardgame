@@ -15,6 +15,7 @@
 #include "client_field.h"
 #include "deck_con.h"
 #include "menu_handler.h"
+#include "room_list_client.h"
 #include "CGUISkinSystem/CGUISkinSystem.h"
 #include <ctime>
 #include <unordered_map>
@@ -114,6 +115,10 @@ struct Config {
 	int chkEnablePScale{ 1 };
 	int skin_index { -1 };
 	int ask_mset{ 0 };
+	bool roomlist_enabled{ false };
+	wchar_t roomlist_server[256]{};
+	wchar_t roomlist_public_host[256]{};
+	bool roomlist_publish{ true };
 };
 
 struct DuelInfo {
@@ -449,6 +454,7 @@ public:
 	irr::gui::IGUIEditBox* ebDrawCount;
 	irr::gui::IGUIEditBox* ebServerName;
 	irr::gui::IGUIEditBox* ebServerPass;
+	irr::gui::IGUICheckBox* chkRoomListPublish;
 	irr::gui::IGUIComboBox* cbDuelRule;
 	irr::gui::IGUIStaticText* stDuelRuleLabel;
 	irr::gui::IGUICheckBox* chkNoCheckDeck;
@@ -710,6 +716,11 @@ public:
 	irr::gui::IGUIWindow* wServerList;
 	irr::gui::IGUIListBox* lstServerList;
 	irr::gui::IGUIButton* btnServerReturn;
+	irr::gui::IGUIEditBox* ebRoomListServer;
+	irr::gui::IGUIEditBox* ebRoomListPublic;
+	irr::gui::IGUIButton* btnRoomListApply;
+
+	RoomListClient roomListClient;
 };
 
 extern Game* mainGame;
@@ -941,6 +952,9 @@ extern Game* mainGame;
 #define BUTTON_SERVER_LIST			392
 #define LISTBOX_SERVER_LIST			393
 #define BUTTON_SERVER_RETURN		394
+#define BUTTON_ROOMLIST_APPLY		395
+
+#define CHECKBOX_ROOMLIST_PUBLISH	396
 
 #define TEXTURE_DUEL				0
 #define TEXTURE_DECK				1
