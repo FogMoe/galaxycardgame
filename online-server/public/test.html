@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galaxy Card Game 中继服务器测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        .status.disconnected {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .status.connected {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #2196f3;
+            color: white;
+            cursor: pointer;
+            flex: 1;
+            min-width: 120px;
+        }
+        button:hover {
+            background-color: #1976d2;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        input[type="text"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100%;
+            margin: 5px 0;
+        }
+        .room-list {
+            background: #f9f9f9;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .room-item {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .log {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Galaxy Card Game 中继服务器测试</h1>
+
+        <div id="status" class="status disconnected">
+            🔴 未连接
+        </div>
+
+        <div class="button-group">
+            <button id="connectBtn" onclick="connect()">连接服务器</button>
+            <button id="disconnectBtn" onclick="disconnect()" disabled>断开连接</button>
+            <button onclick="getServerStatus()">服务器状态</button>
+        </div>
+
+        <div>
+            <h3>房间管理</h3>
+            <input type="text" id="roomName" placeholder="房间名称" value="测试房间">
+            <div class="button-group">
+                <button id="createRoomBtn" onclick="createRoom()" disabled>创建房间</button>
+                <button id="refreshRoomsBtn" onclick="refreshRooms()">刷新房间列表</button>
+            </div>
+
+            <input type="text" id="joinRoomId" placeholder="房间ID">
+            <button id="joinRoomBtn" onclick="joinRoom()" disabled>加入房间</button>
+        </div>
+
+        <div class="room-list">
+            <h3>房间列表</h3>
+            <div id="roomList">暂无房间</div>
+        </div>
+
+        <div>
+            <h3>测试游戏数据</h3>
+            <input type="text" id="testMessage" placeholder="测试消息" value="Hello from client">
+            <button id="sendDataBtn" onclick="sendTestData()" disabled>发送测试数据</button>
+        </div>
+
+        <div>
+            <h3>日志</h3>
+            <div id="log" class="log">等待连接...\n</div>
+            <button onclick="clearLog()">清除日志</button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        let socket = null;
+        let currentRoomId = null;
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.textContent += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateStatus(connected, message) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${connected ? 'connected' : 'disconnected'}`;
+            statusDiv.textContent = `${connected ? '🟢' : '🔴'} ${message}`;
+
+            // 更新按钮状态
+            document.getElementById('connectBtn').disabled = connected;
+            document.getElementById('disconnectBtn').disabled = !connected;
+            document.getElementById('createRoomBtn').disabled = !connected;
+            document.getElementById('joinRoomBtn').disabled = !connected;
+            document.getElementById('sendDataBtn').disabled = !connected || !currentRoomId;
+        }
+
+        function connect() {
+            if (socket) return;
+
+            log('正在连接到中继服务器...');
+            socket = io();
+
+            socket.on('connect', () => {
+                log('✅ 成功连接到中继服务器');
+                updateStatus(true, '已连接');
+            });
+
+            socket.on('disconnect', (reason) => {
+                log(`❌ 与服务器断开连接: ${reason}`);
+                updateStatus(false, '已断开');
+                currentRoomId = null;
+            });
+
+            socket.on('connect_error', (error) => {
+                log(`❌ 连接错误: ${error.message}`);
+                updateStatus(false, '连接失败');
+            });
+
+            // 房间事件
+            socket.on('room-created', (data) => {
+                log(`✅ 房间创建成功: ${data.roomId}`);
+                currentRoomId = data.roomId;
+                document.getElementById('joinRoomId').value = data.roomId;
+            });
+
+            socket.on('joined-room', (data) => {
+                log(`✅ 成功加入房间: ${data.room.id}`);
+                currentRoomId = data.room.id;
+            });
+
+            socket.on('join-error', (data) => {
+                log(`❌ 加入房间失败: ${data.error}`);
+            });
+
+            socket.on('player-joined', (data) => {
+                log(`👤 玩家加入: ${data.playerId}`);
+            });
+
+            socket.on('player-left', (data) => {
+                log(`👤 玩家离开: ${data.playerId}`);
+            });
+
+            socket.on('game-data', (data) => {
+                log(`📦 收到游戏数据: ${data.data} (来自: ${data.from})`);
+            });
+
+            socket.on('game-started', (data) => {
+                log(`🎮 游戏开始! 房间: ${data.room.id}`);
+            });
+        }
+
+        function disconnect() {
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+                updateStatus(false, '未连接');
+                currentRoomId = null;
+                log('🔌 主动断开连接');
+            }
+        }
+
+        function createRoom() {
+            if (!socket) return;
+
+            const roomName = document.getElementById('roomName').value || '测试房间';
+            log(`🏠 创建房间: ${roomName}`);
+
+            socket.emit('create-room', {
+                name: roomName,
+                maxPlayers: 2,
+                version: '1.0.0',
+                gameMode: 'standard'
+            });
+        }
+
+        function joinRoom() {
+            if (!socket) return;
+
+            const roomId = document.getElementById('joinRoomId').value;
+            if (!roomId) {
+                alert('请输入房间ID');
+                return;
+            }
+
+            log(`🚪 尝试加入房间: ${roomId}`);
+            socket.emit('join-room', roomId);
+        }
+
+        function sendTestData() {
+            if (!socket || !currentRoomId) return;
+
+            const message = document.getElementById('testMessage').value || 'Hello';
+            log(`📤 发送测试数据: ${message}`);
+
+            socket.emit('game-data', message);
+        }
+
+        function refreshRooms() {
+            log('🔄 刷新房间列表...');
+
+            fetch('/api/rooms')
+                .then(response => response.json())
+                .then(data => {
+                    log(`📋 获取到 ${data.rooms.length} 个房间`);
+                    displayRooms(data.rooms);
+                })
+                .catch(error => {
+                    log(`❌ 获取房间列表失败: ${error.message}`);
+                });
+        }
+
+        function displayRooms(rooms) {
+            const roomListDiv = document.getElementById('roomList');
+
+            if (rooms.length === 0) {
+                roomListDiv.innerHTML = '<div>暂无房间</div>';
+                return;
+            }
+
+            let html = '';
+            rooms.forEach(room => {
+                html += `
+                    <div class="room-item">
+                        <div>
+                            <strong>${room.name}</strong> (${room.id})<br>
+                            <small>玩家: ${room.players}/${room.maxPlayers} | 模式: ${room.gameMode}</small>
+                        </div>
+                        <button onclick="quickJoinRoom('${room.id}')" style="margin: 0;">加入</button>
+                    </div>
+                `;
+            });
+            roomListDiv.innerHTML = html;
+        }
+
+        function quickJoinRoom(roomId) {
+            document.getElementById('joinRoomId').value = roomId;
+            joinRoom();
+        }
+
+        function getServerStatus() {
+            log('📊 获取服务器状态...');
+
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    log(`📊 服务器状态: ${data.status}`);
+                    log(`   房间数: ${data.rooms}`);
+                    log(`   连接数: ${data.connections}`);
+                    log(`   运行时间: ${Math.floor(data.uptime)}秒`);
+                })
+                .catch(error => {
+                    log(`❌ 获取服务器状态失败: ${error.message}`);
+                });
+        }
+
+        function clearLog() {
+            document.getElementById('log').textContent = '';
+        }
+
+        // 页面加载时自动刷新房间列表
+        window.addEventListener('load', () => {
+            refreshRooms();
+        });
+
+        // 定期刷新房间列表
+        setInterval(refreshRooms, 10000); // 每10秒刷新一次
+    </script>
+</body>
+</html>

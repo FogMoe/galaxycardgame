@@ -114,6 +114,12 @@ struct Config {
 	int chkEnablePScale{ 1 };
 	int skin_index { -1 };
 	int ask_mset{ 0 };
+
+	// 中继服务器设置
+	int use_relay_server{ 0 };                    // 是否使用中继服务器
+	wchar_t relay_server_host[256] {L"localhost"}; // 中继服务器地址
+	unsigned short relay_server_port{ 3000 };     // 中继服务器端口
+	int prefer_relay_over_lan{ 0 };               // 优先使用中继服务器而非局域网
 };
 
 struct DuelInfo {

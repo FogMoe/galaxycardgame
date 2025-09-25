@@ -8,6 +8,7 @@
 #include "game.h"
 #include "deck_manager.h"
 #include "replay.h"
+#include "relay_client.h"
 #ifdef _WIN32
 #include <Windns.h>
 #endif
@@ -47,9 +48,18 @@ unsigned short DuelClient::temp_ver = 0;
 bool DuelClient::try_needed = false;
 bool DuelClient::is_srvpro = false;
 
+// 中继服务器静态变量
+bool DuelClient::is_relay_mode = false;
+std::string DuelClient::current_room_id;
+
 bool DuelClient::StartClient(unsigned int ip, unsigned short port, bool create_game) {
 	if(connect_state)
 		return false;
+
+	// 检查是否应该使用中继服务器
+	if (mainGame->gameConf.use_relay_server) {
+		return StartRelayClient(create_game);
+	}
 	sockaddr_in sin;
 	client_base = event_base_new();
 	if(!client_base)
@@ -4347,12 +4357,37 @@ void DuelClient::SendResponse() {
 		mainGame->singleSignal.Set();
 	} else {
 		mainGame->dInfo.time_player = 2;
-		SendBufferToServer(CTOS_RESPONSE, response_buf, response_len);
+		if (is_relay_mode) {
+			SendRelayGameData(CTOS_RESPONSE, response_buf, response_len);
+		} else {
+			SendBufferToServer(CTOS_RESPONSE, response_buf, response_len);
+		}
 	}
 }
 void DuelClient::BeginRefreshHost() {
 	if(is_refreshing)
 		return;
+
+	// 如果启用了中继服务器，优先使用中继服务器获取房间列表
+	if (mainGame->gameConf.use_relay_server || mainGame->gameConf.prefer_relay_over_lan) {
+		// 先连接中继服务器
+		if (!is_relay_mode && !ConnectToRelayServer()) {
+			// 中继服务器连接失败，回退到局域网搜索
+			if (!mainGame->gameConf.use_relay_server) {
+				// 继续执行原有的局域网搜索逻辑
+			} else {
+				// 如果强制使用中继服务器，显示错误
+				mainGame->gMutex.lock();
+				mainGame->env->addMessageBox(L"", L"无法连接到中继服务器");
+				mainGame->btnLanRefresh->setEnabled(true);
+				mainGame->gMutex.unlock();
+				return;
+			}
+		} else {
+			RefreshRelayRooms();
+			return;
+		}
+	}
 	is_refreshing = true;
 	DuelClient::is_srvpro = false;
 	mainGame->btnLanRefresh->setEnabled(false);
@@ -4587,4 +4622,160 @@ HostResult DuelClient::ParseHost(char *hostname) {
 	result.port = 7911;
 	return result;
 }
+
+// ========== 中继服务器实现 ==========
+
+bool DuelClient::StartRelayClient(bool create_game) {
+	// 初始化中继客户端
+	if (!RelayClient::Initialize()) {
+		return false;
+	}
+
+	// 设置回调函数
+	RelayClient::OnConnected = OnRelayConnected;
+	RelayClient::OnDisconnected = OnRelayDisconnected;
+	RelayClient::OnError = OnRelayError;
+	RelayClient::OnRoomCreated = OnRelayRoomCreated;
+	RelayClient::OnJoinedRoom = OnRelayJoinedRoom;
+	RelayClient::OnPlayerJoined = OnRelayPlayerJoined;
+	RelayClient::OnPlayerLeft = OnRelayPlayerLeft;
+	RelayClient::OnGameDataReceived = OnRelayGameDataReceived;
+
+	// 构造服务器URL
+	char server_host[512];
+	BufferIO::DecodeUTF16(mainGame->gameConf.relay_server_host, (char*)server_host);
+
+	char server_url[1024];
+	snprintf(server_url, sizeof(server_url), "http://%s:%d",
+		server_host, mainGame->gameConf.relay_server_port);
+
+	// 连接到中继服务器
+	if (!RelayClient::Connect(server_url)) {
+		RelayClient::Cleanup();
+		return false;
+	}
+
+	is_relay_mode = true;
+	is_host = create_game;
+
+	return true;
+}
+
+void DuelClient::StopRelayClient() {
+	RelayClient::Disconnect();
+	RelayClient::Cleanup();
+	is_relay_mode = false;
+	current_room_id.clear();
+}
+
+bool DuelClient::ConnectToRelayServer() {
+	return StartRelayClient(false);
+}
+
+void DuelClient::CreateRelayRoom(const std::string& room_name) {
+	if (!is_relay_mode) return;
+
+	RelayClient::CreateRoom(room_name, 2, "standard");
+}
+
+void DuelClient::JoinRelayRoom(const std::string& room_id) {
+	if (!is_relay_mode) return;
+
+	RelayClient::JoinRoom(room_id);
+}
+
+void DuelClient::RefreshRelayRooms() {
+	if (!is_relay_mode) return;
+
+	RelayClient::RefreshRooms();
+}
+
+void DuelClient::SendRelayGameData(unsigned char proto, const void* buffer, size_t len) {
+	if (!is_relay_mode || current_room_id.empty()) return;
+
+	RelayClient::SendGameData(proto, buffer, len);
+}
+
+// ========== 中继服务器回调实现 ==========
+
+void DuelClient::OnRelayConnected() {
+	mainGame->gMutex.lock();
+	connect_state = 0x7; // 设置为已连接状态
+	mainGame->gMutex.unlock();
+}
+
+void DuelClient::OnRelayDisconnected(const std::string& reason) {
+	mainGame->gMutex.lock();
+	connect_state = 0;
+	if (!is_closing) {
+		mainGame->ShowElement(mainGame->wLanWindow);
+		mainGame->env->addMessageBox(L"", L"与中继服务器的连接已断开");
+	}
+	mainGame->gMutex.unlock();
+}
+
+void DuelClient::OnRelayError(const std::string& error) {
+	mainGame->gMutex.lock();
+	if (!is_closing) {
+		wchar_t error_msg[512];
+		BufferIO::DecodeUTF8(error.c_str(), error_msg);
+		mainGame->env->addMessageBox(L"", error_msg);
+	}
+	mainGame->gMutex.unlock();
+}
+
+void DuelClient::OnRelayRoomCreated(const std::string& room_id) {
+	mainGame->gMutex.lock();
+	current_room_id = room_id;
+
+	// 更新UI显示房间ID
+	wchar_t room_id_wide[32];
+	BufferIO::DecodeUTF8(room_id.c_str(), room_id_wide);
+
+	// 这里可以添加显示房间ID的逻辑
+	// 例如在某个标签上显示房间号
+
+	mainGame->HideElement(mainGame->wLanWindow);
+	mainGame->ShowElement(mainGame->wCreateHost);
+	mainGame->gMutex.unlock();
+}
+
+void DuelClient::OnRelayJoinedRoom(const std::string& room_id) {
+	mainGame->gMutex.lock();
+	current_room_id = room_id;
+
+	// 进入等待房主开始游戏的状态
+	mainGame->HideElement(mainGame->wLanWindow);
+	mainGame->ShowElement(mainGame->wCreateHost);
+	mainGame->gMutex.unlock();
+}
+
+void DuelClient::OnRelayPlayerJoined(const std::string& player_id) {
+	mainGame->gMutex.lock();
+	// 更新玩家列表显示
+	// 这里可以添加玩家加入的通知逻辑
+	mainGame->gMutex.unlock();
+}
+
+void DuelClient::OnRelayPlayerLeft(const std::string& player_id) {
+	mainGame->gMutex.lock();
+	// 更新玩家列表显示
+	// 这里可以添加玩家离开的通知逻辑
+	mainGame->gMutex.unlock();
+}
+
+void DuelClient::OnRelayGameDataReceived(const unsigned char* data, size_t len, const std::string& from) {
+	if (len == 0) return;
+
+	// 处理接收到的游戏数据，就像原来从TCP接收一样
+	unsigned char proto = data[0];
+	const unsigned char* payload = data + 1;
+	size_t payload_len = len - 1;
+
+	// 调用原有的数据处理逻辑
+	mainGame->gMutex.lock();
+	ClientAnalyze((unsigned char*)data, len);
+	mainGame->gMutex.unlock();
+}
+
 }

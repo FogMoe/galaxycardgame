@@ -135,6 +135,27 @@ public:
 	static void BeginRefreshHost();
 	static int RefreshThread(event_base* broadev);
 	static void BroadcastReply(evutil_socket_t fd, short events, void* arg);
+
+	// 中继服务器相关方法
+	static bool is_relay_mode;                    // 当前是否使用中继模式
+	static std::string current_room_id;           // 当前房间ID
+	static bool StartRelayClient(bool create_game = true);
+	static void StopRelayClient();
+	static bool ConnectToRelayServer();
+	static void CreateRelayRoom(const std::string& room_name);
+	static void JoinRelayRoom(const std::string& room_id);
+	static void RefreshRelayRooms();
+	static void SendRelayGameData(unsigned char proto, const void* buffer, size_t len);
+
+	// 中继服务器回调处理
+	static void OnRelayConnected();
+	static void OnRelayDisconnected(const std::string& reason);
+	static void OnRelayError(const std::string& error);
+	static void OnRelayRoomCreated(const std::string& room_id);
+	static void OnRelayJoinedRoom(const std::string& room_id);
+	static void OnRelayPlayerJoined(const std::string& player_id);
+	static void OnRelayPlayerLeft(const std::string& player_id);
+	static void OnRelayGameDataReceived(const unsigned char* data, size_t len, const std::string& from);
 };
 }
 
