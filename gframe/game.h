@@ -31,8 +31,8 @@ struct DuelInfo {
 	int max_supply[2]{};    // 最大补给值
 
 	void Clear() {
-		supply[0] = 1; supply[1] = 1;
-		max_supply[0] = 1; max_supply[1] = 1;
+		supply[0] = 0; supply[1] = 0;
+		max_supply[0] = 0; max_supply[1] = 0;
 	}
 };
 
