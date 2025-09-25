@@ -29,7 +29,7 @@ namespace irr {
 #include <thread>
 #include "myfilesystem.h"
 
-unsigned short PRO_VERSION = 0x1362;
+unsigned short PRO_VERSION = 0x1001;
 
 namespace ygo {
 
