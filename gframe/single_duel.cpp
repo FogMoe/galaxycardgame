@@ -1990,6 +1990,15 @@ void SingleDuel::RequestField(DuelPlayer* dp) {
 		BufferIO::Write<uint16_t>(pbuf, 0);
 	});
 
+	for(uint8_t supply_player = 0; supply_player < 2; ++supply_player) {
+		WriteMsg([&](uint8_t*& pbuf) {
+			BufferIO::Write<uint8_t>(pbuf, MSG_SUPPLY_UPDATE);
+			BufferIO::Write<uint8_t>(pbuf, supply_player);
+			BufferIO::Write<int32_t>(pbuf, get_player_supply(pduel, supply_player));
+			BufferIO::Write<int32_t>(pbuf, get_player_max_supply(pduel, supply_player));
+		});
+	}
+
 	uint8_t newturn_count = (turn_player == 1) ? 2 : 1;
 	for (uint8_t i = 0; i < newturn_count; ++i) {
 		WriteMsg([&](uint8_t*& pbuf) {
