@@ -1,5 +1,5 @@
 --极光水母
---1"共振壳"不存在于场上时，1回合1次，消耗一个高能指示物将一个敌方单位变为己方单位，然后使其效果无效。
+--1"共振壳"不存在于场上时，1回合1次，消耗3个高能指示物将一个敌方单位变为己方单位，然后使其效果无效。
 --2被破坏时对全场单位造成这张卡剩余生命值的伤害。
 --3当场上存在"共振壳"或"高能区域"时才可以被召唤。
 --4当场上不存在"共振壳"或"高能区域"时破坏
@@ -25,6 +25,16 @@ function s.initial(c)
 	e2:SetOperation(s.spop)
 	e2:SetValue(SUMMON_VALUE_SELF)
 	c:RegisterEffect(e2)
+
+	-- 限制特殊召唤表示：只能以攻击表示进入场上
+	local e6=Effect.CreateEffect(c)
+	e6:SetType(EFFECT_TYPE_FIELD)
+	e6:SetCode(EFFECT_LIMIT_SPECIAL_SUMMON_POSITION)
+	e6:SetProperty(EFFECT_FLAG_PLAYER_TARGET)
+	e6:SetRange(LOCATION_EXTRA)
+	e6:SetTargetRange(1,0)
+	e6:SetTarget(s.sumlimit)
+	c:RegisterEffect(e6)
 
 	-- 4.自毁条件：当场上不存在"共振壳"或"高能区域"时破坏
 	local e3=Effect.CreateEffect(c)
@@ -67,6 +77,11 @@ end
 
 function s.check_support_exist(tp)
 	return Duel.IsExistingMatchingCard(s.supportfilter,tp,LOCATION_ONFIELD,LOCATION_ONFIELD,1,nil)
+end
+
+function s.sumlimit(e,c,sump,sumtype,sumpos,targetp)
+	if c~=e:GetHandler() then return false end
+	return bit.band(sumpos,POS_FACEUP_DEFENSE+POS_FACEDOWN_DEFENSE)~=0
 end
 
 -- 召唤限制条件
@@ -114,10 +129,10 @@ end
 function s.ctlcost(e,tp,eg,ep,ev,re,r,rp,chk)
 	if chk==0 then
 		-- 使用标准API检查场上是否有足够的高能计数器
-		return Duel.IsCanRemoveCounter(tp,1,0,0x1042,1,REASON_COST)
+		return Duel.IsCanRemoveCounter(tp,1,0,0x1042,3,REASON_COST)
 	end
-	-- 消耗1个高能计数器
-	Duel.RemoveCounter(tp,1,0,0x1042,1,REASON_COST)
+	-- 消耗3个高能计数器
+	Duel.RemoveCounter(tp,1,0,0x1042,3,REASON_COST)
 end
 
 -- 控制权目标
