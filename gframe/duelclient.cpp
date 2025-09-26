@@ -13,6 +13,9 @@
 #endif
 #include <thread>
 #include <algorithm>
+#include <string>
+#include <sstream>
+#include <iomanip>
 
 namespace ygo {
 
@@ -1913,26 +1916,42 @@ bool DuelClient::ClientAnalyze(unsigned char* msg, int len) {
 		mainGame->dField.activatable_cards.clear();
 		mainGame->dField.activatable_descs.clear();
 		mainGame->dField.conti_cards.clear();
-		for (int i = 0; i < count; ++i) {
-			int flag = BufferIO::Read<uint8_t>(pbuf);
-			int forced = BufferIO::Read<uint8_t>(pbuf);
-			flag |= forced << 8;
-			code = BufferIO::Read<int32_t>(pbuf);
-			c = mainGame->LocalPlayer(BufferIO::Read<uint8_t>(pbuf));
-			l = BufferIO::Read<uint8_t>(pbuf);
-			s = BufferIO::Read<uint8_t>(pbuf);
-			ss = BufferIO::Read<uint8_t>(pbuf);
-			desc = BufferIO::Read<int32_t>(pbuf);
-			pcard = mainGame->dField.GetCard(c, l, s, ss);
-			mainGame->dField.activatable_cards.push_back(pcard);
-			mainGame->dField.activatable_descs.push_back(std::make_pair(desc, flag));
-			pcard->is_selected = false;
-			if(forced) {
-				mainGame->dField.chain_forced = true;
-			}
-			if(flag & EDESC_OPERATION) {
-				pcard->chain_code = code;
-				mainGame->dField.conti_cards.push_back(pcard);
+                for (int i = 0; i < count; ++i) {
+                        int flag = BufferIO::Read<uint8_t>(pbuf);
+                        int forced = BufferIO::Read<uint8_t>(pbuf);
+                        bool is_forced_entry = forced != 0;
+                        flag |= forced << 8;
+                        code = BufferIO::Read<int32_t>(pbuf);
+                        c = mainGame->LocalPlayer(BufferIO::Read<uint8_t>(pbuf));
+                        l = BufferIO::Read<uint8_t>(pbuf);
+                        s = BufferIO::Read<uint8_t>(pbuf);
+                        ss = BufferIO::Read<uint8_t>(pbuf);
+                        desc = BufferIO::Read<int32_t>(pbuf);
+                        pcard = mainGame->dField.GetCard(c, l, s, ss);
+                        if(!pcard) {
+                                // Guard against protocol entries that reference unresolved cards; log for diagnostics.
+                                std::ostringstream oss;
+                                oss << "[chain] Skipped entry missing card (controller=" << c
+                                        << ", location=" << std::showbase << std::hex << l
+                                        << std::dec << ", sequence=" << s
+                                        << ", sub_seq=" << ss
+                                        << ", flag=" << std::showbase << std::hex << flag
+                                        << std::dec << ", desc=" << desc << ')';
+                                const std::string debug_message = oss.str();
+                                mainGame->AddDebugMsg(debug_message.c_str());
+                                if(is_forced_entry)
+                                        mainGame->dField.chain_forced = true;
+                                continue;
+                        }
+                        mainGame->dField.activatable_cards.push_back(pcard);
+                        mainGame->dField.activatable_descs.emplace_back(desc, flag);
+                        pcard->is_selected = false;
+                        if(is_forced_entry) {
+                                mainGame->dField.chain_forced = true;
+                        }
+                        if(flag & EDESC_OPERATION) {
+                                pcard->chain_code = code;
+                                mainGame->dField.conti_cards.push_back(pcard);
 				mainGame->dField.conti_act = true;
 				conti_exist = true;
 			} else {

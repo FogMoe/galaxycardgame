@@ -153,15 +153,34 @@ void ClientField::ResetSequence(std::vector<ClientCard*>& list, bool reset_heigh
 	}
 }
 ClientCard* ClientField::GetCard(int controler, int location, int sequence, int sub_seq) {
-	std::vector<ClientCard*>* lst = 0;
-	bool is_xyz = (location & LOCATION_OVERLAY) != 0;
-	location &= 0x7f;
-	switch(location) {
-	case LOCATION_DECK:
-		lst = &deck[controler];
-		break;
-	case LOCATION_HAND:
-		lst = &hand[controler];
+        std::vector<ClientCard*>* lst = 0;
+        bool is_xyz = (location & LOCATION_OVERLAY) != 0;
+        int normalized_location = location & ~LOCATION_OVERLAY;
+        if(normalized_location & (LOCATION_FZONE | LOCATION_PZONE))
+                normalized_location |= LOCATION_SZONE;
+        const int kBaseLocationMask = LOCATION_DECK | LOCATION_HAND | LOCATION_MZONE | LOCATION_SZONE
+                | LOCATION_GRAVE | LOCATION_REMOVED | LOCATION_EXTRA;
+        auto lowest_set_bit = [](int value) -> int {
+                for(unsigned int bit = 1u; bit != 0u; bit <<= 1u) {
+                        if(value & static_cast<int>(bit))
+                                return static_cast<int>(bit);
+                }
+                return 0;
+        };
+        int base_location = normalized_location & kBaseLocationMask;
+        if(base_location == 0)
+                base_location = lowest_set_bit(normalized_location);
+        if(base_location & (base_location - 1))
+                base_location = lowest_set_bit(base_location);
+        if(base_location == 0)
+                return 0;
+        location = base_location;
+        switch(location) {
+        case LOCATION_DECK:
+                lst = &deck[controler];
+                break;
+        case LOCATION_HAND:
+                lst = &hand[controler];
 		break;
 	case LOCATION_MZONE:
 		lst = &mzone[controler];
