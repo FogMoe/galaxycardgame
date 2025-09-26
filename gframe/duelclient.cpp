@@ -1923,36 +1923,57 @@ bool DuelClient::ClientAnalyze(unsigned char* msg, int len) {
 			s = BufferIO::Read<uint8_t>(pbuf);
 			ss = BufferIO::Read<uint8_t>(pbuf);
 			desc = BufferIO::Read<int32_t>(pbuf);
-			pcard = mainGame->dField.GetCard(c, l, s, ss);
-			mainGame->dField.activatable_cards.push_back(pcard);
-			mainGame->dField.activatable_descs.push_back(std::make_pair(desc, flag));
-			pcard->is_selected = false;
-			if(forced) {
-				mainGame->dField.chain_forced = true;
-			}
-			if(flag & EDESC_OPERATION) {
-				pcard->chain_code = code;
-				mainGame->dField.conti_cards.push_back(pcard);
-				mainGame->dField.conti_act = true;
-				conti_exist = true;
-			} else {
-				pcard->is_selectable = true;
-				if(flag & EDESC_RESET)
-					pcard->cmdFlag |= COMMAND_RESET;
-				else
-					pcard->cmdFlag |= COMMAND_ACTIVATE;
-				if(pcard->location == LOCATION_DECK) {
-					pcard->SetCode(code);
-					mainGame->dField.deck_act[c] = true;
-				} else if(l == LOCATION_GRAVE)
-					mainGame->dField.grave_act[c] = true;
-				else if(l == LOCATION_REMOVED)
-					mainGame->dField.remove_act[c] = true;
-				else if(l == LOCATION_EXTRA)
-					mainGame->dField.extra_act[c] = true;
-				else if(l == LOCATION_OVERLAY)
-					panelmode = true;
-			}
+                       pcard = mainGame->dField.GetCard(c, l, s, ss);
+                       bool is_placeholder = false;
+                       if(!pcard) {
+                               pcard = new ClientCard();
+                               is_placeholder = true;
+                               pcard->controler = c;
+                               pcard->location = l;
+                               pcard->sequence = s;
+                               pcard->position = (l & LOCATION_OVERLAY) ? 0 : (unsigned char)ss;
+                               if(code)
+                                       pcard->SetCode(code);
+                               else
+                                       pcard->code = 0;
+                               mainGame->dField.chain_temp.push_back(pcard);
+                               panelmode = true;
+                       } else if(code != 0 && pcard->code != code) {
+                               pcard->SetCode(code);
+                       }
+                       mainGame->dField.activatable_cards.push_back(pcard);
+                       mainGame->dField.activatable_descs.push_back(std::make_pair(desc, flag));
+                       pcard->is_selected = false;
+                       if(forced) {
+                               mainGame->dField.chain_forced = true;
+                       }
+                       if(flag & EDESC_OPERATION) {
+                               if(!is_placeholder) {
+                                       pcard->chain_code = code;
+                                       mainGame->dField.conti_cards.push_back(pcard);
+                                       mainGame->dField.conti_act = true;
+                                       conti_exist = true;
+                               }
+                       } else {
+                               pcard->is_selectable = true;
+                               if(!is_placeholder) {
+                                       if(flag & EDESC_RESET)
+                                               pcard->cmdFlag |= COMMAND_RESET;
+                                       else
+                                               pcard->cmdFlag |= COMMAND_ACTIVATE;
+                                       if(pcard->location == LOCATION_DECK) {
+                                               pcard->SetCode(code);
+                                               mainGame->dField.deck_act[c] = true;
+                                       } else if(l == LOCATION_GRAVE)
+                                               mainGame->dField.grave_act[c] = true;
+                                       else if(l == LOCATION_REMOVED)
+                                               mainGame->dField.remove_act[c] = true;
+                                       else if(l == LOCATION_EXTRA)
+                                               mainGame->dField.extra_act[c] = true;
+                                       else if(l == LOCATION_OVERLAY)
+                                               panelmode = true;
+                               }
+                       }
 		}
 		if(!select_trigger && !mainGame->dField.chain_forced && (mainGame->ignore_chain || ((count == 0 || specount == 0) && !mainGame->always_chain)) && (count == 0 || !mainGame->chain_when_avail)) {
 			SetResponseI(-1);

@@ -91,6 +91,9 @@ void ClientField::Clear() {
 	for(auto cit = limbo_temp.begin(); cit != limbo_temp.end(); ++cit)
 			delete *cit;
 	limbo_temp.clear();
+	for(auto cit = chain_temp.begin(); cit != chain_temp.end(); ++cit)
+			delete *cit;
+	chain_temp.clear();
 	for(auto sit = overlay_cards.begin(); sit != overlay_cards.end(); ++sit)
 		delete *sit;
 	overlay_cards.clear();
@@ -410,21 +413,27 @@ void ClientField::ClearSelect() {
 	}
 }
 void ClientField::ClearChainSelect() {
-	for(auto cit = activatable_cards.begin(); cit != activatable_cards.end(); ++cit) {
-		(*cit)->cmdFlag = 0;
-		(*cit)->chain_code = 0;
-		(*cit)->is_selectable = false;
-		(*cit)->is_selected = false;
-	}
-	for(int i = 0; i < 2; ++i) {
-		deck_act[i] = false;
-		extra_act[i] = false;
-		grave_act[i] = false;
-		remove_act[i] = false;
-		pzone_act[i] = false;
-	}
-	conti_cards.clear();
-	conti_act = false;
+        for(auto cit = activatable_cards.begin(); cit != activatable_cards.end(); ++cit) {
+                ClientCard* pcard = *cit;
+                if(!pcard)
+                        continue;
+                pcard->cmdFlag = 0;
+                pcard->chain_code = 0;
+                pcard->is_selectable = false;
+                pcard->is_selected = false;
+        }
+        for(int i = 0; i < 2; ++i) {
+                deck_act[i] = false;
+                extra_act[i] = false;
+                grave_act[i] = false;
+                remove_act[i] = false;
+                pzone_act[i] = false;
+        }
+        conti_cards.clear();
+        conti_act = false;
+	for(auto cit = chain_temp.begin(); cit != chain_temp.end(); ++cit)
+                delete *cit;
+	chain_temp.clear();
 }
 // needs to be synchronized with EGET_SCROLL_BAR_CHANGED
 void ClientField::ShowSelectCard(bool buttonok, bool chain) {
