@@ -45,12 +45,14 @@ function s.initial(c)
 	-- 2.休整阶段效果："共振壳"不存在时，伤害对方生命值最低单位并恢复自身
 	local e5=Effect.CreateEffect(c)
 	e5:SetDescription(aux.Stringid(id,0))
-	e5:SetCategory(CATEGORY_DAMAGE+CATEGORY_DEFCHANGE)
-	e5:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_TRIGGER_F)
+	e5:SetCategory(CATEGORY_DEFCHANGE)
+	e5:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_TRIGGER_O)
 	e5:SetCode(EVENT_PHASE+PHASE_END)
 	e5:SetRange(LOCATION_MZONE)
 	e5:SetCountLimit(1)
+	e5:SetProperty(EFFECT_FLAG_CARD_TARGET)
 	e5:SetCondition(s.draincon)
+	e5:SetTarget(s.draintg)
 	e5:SetOperation(s.drainop)
 	c:RegisterEffect(e5)
 
@@ -63,6 +65,21 @@ function s.initial(c)
 	e6:SetCondition(s.damcon)
 	e6:SetOperation(s.damop)
 	c:RegisterEffect(e6)
+
+	-- 限制特殊召唤表示：只能以攻击表示进入场上
+	local e7=Effect.CreateEffect(c)
+	e7:SetType(EFFECT_TYPE_FIELD)
+	e7:SetCode(EFFECT_LIMIT_SPECIAL_SUMMON_POSITION)
+	e7:SetProperty(EFFECT_FLAG_PLAYER_TARGET)
+	e7:SetRange(LOCATION_EXTRA)
+	e7:SetTargetRange(1,0)
+	e7:SetTarget(s.sumlimit)
+	c:RegisterEffect(e7)
+end
+
+function s.sumlimit(e,c,sump,sumtype,sumpos,targetp)
+	if c~=e:GetHandler() then return false end
+	return bit.band(sumpos,POS_FACEUP_DEFENSE+POS_FACEDOWN_DEFENSE)~=0
 end
 
 -- 检查是否存在"共振壳"或"高能区域"
@@ -111,10 +128,20 @@ function s.descon(e)
 end
 
 -- 休整阶段效果条件："共振壳"不存在且对方有单位
+
 function s.draincon(e,tp,eg,ep,ev,re,r,rp)
 	return Duel.GetTurnPlayer()==tp
 		and not Duel.IsExistingMatchingCard(Card.IsCode,tp,LOCATION_ONFIELD,LOCATION_ONFIELD,1,nil,10000062)
-		and Duel.IsExistingMatchingCard(Card.IsFaceup,tp,0,LOCATION_MZONE,1,nil)
+		and Duel.IsExistingMatchingCard(Card.IsFaceup,tp,0,LOCATION_MZONE,1,nil) and e:GetHandler():GetHp()<e:GetHandler():GetBaseHp()
+end
+
+-- 休整阶段效果目标：自动锁定对方最低生命值单位
+function s.draintg(e,tp,eg,ep,ev,re,r,rp,chk)
+	local target=s.find_lowest_hp_target(tp)
+	if chk==0 then return target~=nil end
+	local tg=Group.FromCards(target)
+	Duel.SetTargetCard(tg)
+	Duel.SetOperationInfo(0,CATEGORY_DEFCHANGE,tg,1,0,0)
 end
 
 -- 寻找对方生命值最低的单位
@@ -122,18 +149,32 @@ function s.find_lowest_hp_target(tp)
 	local g=Duel.GetMatchingGroup(Card.IsFaceup,tp,0,LOCATION_MZONE,nil)
 	if g:GetCount()==0 then return nil end
 
-	local lowest_hp = 99999
-	local target = nil
+	local lowest_hp
+	local best
 	local tc = g:GetFirst()
 	while tc do
 		local hp = tc:GetHp()
-		if hp < lowest_hp then
+		if not lowest_hp or hp < lowest_hp or (hp==lowest_hp and s.is_better_target(tc,best)) then
 			lowest_hp = hp
-			target = tc
+			best = tc
 		end
 		tc = g:GetNext()
 	end
-	return target
+	return best
+end
+
+function s.is_better_target(c,reference)
+	if reference==nil then return true end
+	if c:GetControler()~=reference:GetControler() then
+		return c:GetControler()<reference:GetControler()
+	end
+	if c:GetLocation()~=reference:GetLocation() then
+		return c:GetLocation()<reference:GetLocation()
+	end
+	if c:GetSequence()~=reference:GetSequence() then
+		return c:GetSequence()<reference:GetSequence()
+	end
+	return c:GetFieldID()<reference:GetFieldID()
 end
 
 -- 休整阶段操作：伤害和恢复
@@ -141,8 +182,9 @@ function s.drainop(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
 	if not c:IsRelateToEffect(e) then return end
 
-	local target = s.find_lowest_hp_target(tp)
+	local target = Duel.GetFirstTarget()
 	if target then
+		if not target:IsRelateToEffect(e) then return end
 		-- 计算伤害：原本生命值 - 当前生命值
 		local original_hp = c:GetBaseHp()
 		local current_hp = c:GetHp()
