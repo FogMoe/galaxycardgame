@@ -144,34 +144,37 @@ void DuelClient::ClientEvent(bufferevent* bev, short events, void* ctx) {
 		SendPacketToServer(CTOS_PLAYER_INFO, cspi);
 		if(create_game) {
 			CTOS_CreateGame cscg;
-			if(bot_mode) {
-				BufferIO::CopyCharArray(L"Bot Game", cscg.name);
-				BufferIO::CopyCharArray(L"", cscg.pass);
-				cscg.info.rule = 5;
-				cscg.info.mode = 0;
-				cscg.info.start_hand = 5;
-				cscg.info.start_lp = 8000;
-				cscg.info.draw_count = 1;
-				cscg.info.time_limit = 0;
-				cscg.info.lflist = 0;
-				cscg.info.duel_rule = mainGame->cbBotRule->getSelected() + 3;
-				cscg.info.no_check_deck = mainGame->chkBotNoCheckDeck->isChecked();
-				cscg.info.no_shuffle_deck = mainGame->chkBotNoShuffleDeck->isChecked();
-			}
-			else {
-				BufferIO::CopyCharArray(mainGame->ebServerName->getText(), cscg.name);
-				BufferIO::CopyCharArray(mainGame->ebServerPass->getText(), cscg.pass);
-				cscg.info.rule = mainGame->cbRule->getSelected();
-				cscg.info.mode = mainGame->cbMatchMode->getSelected();
-				cscg.info.start_hand = std::wcstol(mainGame->ebStartHand->getText(),nullptr,10);
-				cscg.info.start_lp = std::wcstol(mainGame->ebStartLP->getText(),nullptr,10);
-				cscg.info.draw_count = std::wcstol(mainGame->ebDrawCount->getText(),nullptr,10);
-				cscg.info.time_limit = std::wcstol(mainGame->ebTimeLimit->getText(),nullptr,10);
-				cscg.info.lflist = mainGame->cbHostLFlist->getItemData(mainGame->cbHostLFlist->getSelected());
-				cscg.info.duel_rule = mainGame->cbDuelRule->getSelected() + 1;
-				cscg.info.no_check_deck = mainGame->chkNoCheckDeck->isChecked();
-				cscg.info.no_shuffle_deck = mainGame->chkNoShuffleDeck->isChecked();
-			}
+                        if(bot_mode) {
+                                BufferIO::CopyCharArray(L"Bot Game", cscg.name);
+                                BufferIO::CopyCharArray(L"", cscg.pass);
+                                cscg.info.rule = 5;
+                                cscg.info.mode = MODE_SINGLE;
+                                cscg.info.start_hand = 3;
+                                cscg.info.start_lp = 20;
+                                cscg.info.draw_count = 1;
+                                cscg.info.time_limit = 0;
+                                cscg.info.lflist = 0;
+                                cscg.info.duel_rule = mainGame->cbBotRule->getSelected() + 3;
+                                cscg.info.no_check_deck = mainGame->chkBotNoCheckDeck->isChecked();
+                                cscg.info.no_shuffle_deck = mainGame->chkBotNoShuffleDeck->isChecked();
+                        }
+                        else {
+                                BufferIO::CopyCharArray(mainGame->ebServerName->getText(), cscg.name);
+                                BufferIO::CopyCharArray(mainGame->ebServerPass->getText(), cscg.pass);
+                                // GalaxyCardGame 固定使用 "所有卡片" 规则
+                                cscg.info.rule = 5;
+                                // 仅保留单打/双打两种模式
+                                int selected_mode = mainGame->cbMatchMode->getSelected();
+                                cscg.info.mode = (selected_mode == 0) ? MODE_SINGLE : MODE_TAG;
+                                cscg.info.start_hand = std::wcstol(mainGame->ebStartHand->getText(), nullptr, 10);
+                                cscg.info.start_lp = std::wcstol(mainGame->ebStartLP->getText(), nullptr, 10);
+                                cscg.info.draw_count = std::wcstol(mainGame->ebDrawCount->getText(), nullptr, 10);
+                                cscg.info.time_limit = std::wcstol(mainGame->ebTimeLimit->getText(), nullptr, 10);
+                                cscg.info.lflist = mainGame->cbHostLFlist->getItemData(mainGame->cbHostLFlist->getSelected());
+                                cscg.info.duel_rule = mainGame->cbDuelRule->getSelected() + 1;
+                                cscg.info.no_check_deck = mainGame->chkNoCheckDeck->isChecked();
+                                cscg.info.no_shuffle_deck = mainGame->chkNoShuffleDeck->isChecked();
+                        }
 			SendPacketToServer(CTOS_CREATE_GAME, cscg);
 		} else {
 			CTOS_JoinGame csjg;
@@ -4466,9 +4469,9 @@ void DuelClient::BroadcastReply(evutil_socket_t fd, short events, void * arg) {
 			hoststr.append(L"][");
 			hoststr.append(dataManager.GetSysString(pHP->host.mode + 1244));
 			hoststr.append(L"][");
-			if(pHP->host.draw_count == 1 && pHP->host.start_hand == 5 && pHP->host.start_lp == 8000
-			        && !pHP->host.no_check_deck && !pHP->host.no_shuffle_deck
-			        && pHP->host.duel_rule == YGOPRO_DEFAULT_DUEL_RULE)
+                        if(pHP->host.draw_count == 1 && pHP->host.start_hand == 3 && pHP->host.start_lp == 20
+                                && !pHP->host.no_check_deck && !pHP->host.no_shuffle_deck
+                                && pHP->host.duel_rule == 2)
 				hoststr.append(dataManager.GetSysString(1247));
 			else hoststr.append(dataManager.GetSysString(1248));
 			hoststr.append(L"]");
