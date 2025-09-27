@@ -141,16 +141,16 @@ int main(int argc, char* argv[]) {
 	ygo::server_port = 7911;
 	ygo::replay_mode = 0;
 	ygo::duel_flags = 0;
-	ygo::game_info.lflist = 0;
-	ygo::game_info.rule = 0;
-	ygo::game_info.mode = 0;
-	ygo::game_info.start_hand = 5;
-	ygo::game_info.start_lp = 8000;
-	ygo::game_info.draw_count = 1;
-	ygo::game_info.no_check_deck = false;
-	ygo::game_info.no_shuffle_deck = false;
-	ygo::game_info.duel_rule = YGOPRO_DEFAULT_DUEL_RULE;
-	ygo::game_info.time_limit = 180;
+       ygo::game_info.lflist = 0;
+       ygo::game_info.rule = 5;
+       ygo::game_info.mode = MODE_SINGLE;
+       ygo::game_info.start_hand = 3;
+       ygo::game_info.start_lp = 20;
+       ygo::game_info.draw_count = 1;
+       ygo::game_info.no_check_deck = false;
+       ygo::game_info.no_shuffle_deck = false;
+       ygo::game_info.duel_rule = 2;
+       ygo::game_info.time_limit = 120;
 	std::memset(ygo::pre_seed, 0, sizeof(ygo::pre_seed));
 	std::memset(ygo::pre_seed_specified, 0, sizeof(ygo::pre_seed_specified));
 	if (argc == 2) {

@@ -8,6 +8,7 @@
 #include "game.h"
 #include "deck_manager.h"
 #include "replay.h"
+#include <cstdint>
 #ifdef _WIN32
 #include <Windns.h>
 #endif
@@ -1897,63 +1898,78 @@ bool DuelClient::ClientAnalyze(unsigned char* msg, int len) {
 			mainGame->dField.ShowCancelOrFinishButton(0);
 		return false;
 	}
-	case MSG_SELECT_CHAIN: {
-		/*int selecting_player = */BufferIO::Read<uint8_t>(pbuf);
-		int count = BufferIO::Read<uint8_t>(pbuf);
-		int specount = BufferIO::Read<uint8_t>(pbuf);
-		/*int hint0 = */BufferIO::Read<int32_t>(pbuf);
-		/*int hint1 = */BufferIO::Read<int32_t>(pbuf);
-		int c, s, ss, desc;
-		unsigned int code,l;
-		ClientCard* pcard;
-		bool panelmode = false;
-		bool conti_exist = false;
-		bool select_trigger = (specount == 0x7f);
-		mainGame->dField.chain_forced = false;
-		mainGame->dField.activatable_cards.clear();
-		mainGame->dField.activatable_descs.clear();
-		mainGame->dField.conti_cards.clear();
-		for (int i = 0; i < count; ++i) {
-			int flag = BufferIO::Read<uint8_t>(pbuf);
-			int forced = BufferIO::Read<uint8_t>(pbuf);
-			flag |= forced << 8;
-			code = BufferIO::Read<int32_t>(pbuf);
-			c = mainGame->LocalPlayer(BufferIO::Read<uint8_t>(pbuf));
-			l = BufferIO::Read<uint8_t>(pbuf);
-			s = BufferIO::Read<uint8_t>(pbuf);
-			ss = BufferIO::Read<uint8_t>(pbuf);
-			desc = BufferIO::Read<int32_t>(pbuf);
-			pcard = mainGame->dField.GetCard(c, l, s, ss);
-			mainGame->dField.activatable_cards.push_back(pcard);
-			mainGame->dField.activatable_descs.push_back(std::make_pair(desc, flag));
-			pcard->is_selected = false;
-			if(forced) {
-				mainGame->dField.chain_forced = true;
-			}
-			if(flag & EDESC_OPERATION) {
-				pcard->chain_code = code;
-				mainGame->dField.conti_cards.push_back(pcard);
-				mainGame->dField.conti_act = true;
-				conti_exist = true;
-			} else {
-				pcard->is_selectable = true;
-				if(flag & EDESC_RESET)
-					pcard->cmdFlag |= COMMAND_RESET;
-				else
-					pcard->cmdFlag |= COMMAND_ACTIVATE;
-				if(pcard->location == LOCATION_DECK) {
-					pcard->SetCode(code);
-					mainGame->dField.deck_act[c] = true;
-				} else if(l == LOCATION_GRAVE)
-					mainGame->dField.grave_act[c] = true;
-				else if(l == LOCATION_REMOVED)
-					mainGame->dField.remove_act[c] = true;
-				else if(l == LOCATION_EXTRA)
-					mainGame->dField.extra_act[c] = true;
-				else if(l == LOCATION_OVERLAY)
-					panelmode = true;
-			}
-		}
+case MSG_SELECT_CHAIN: {
+/*int selecting_player = */BufferIO::Read<uint8_t>(pbuf);
+int count = BufferIO::Read<uint8_t>(pbuf);
+int specount = BufferIO::Read<uint8_t>(pbuf);
+/*int hint0 = */BufferIO::Read<int32_t>(pbuf);
+/*int hint1 = */BufferIO::Read<int32_t>(pbuf);
+int c, s, ss, desc;
+unsigned int code;
+unsigned int l;
+ClientCard* pcard;
+bool panelmode = false;
+bool conti_exist = false;
+bool select_trigger = (specount == 0x7f);
+mainGame->dField.chain_forced = false;
+mainGame->dField.activatable_cards.clear();
+mainGame->dField.activatable_descs.clear();
+mainGame->dField.conti_cards.clear();
+for (int i = 0; i < count; ++i) {
+int flag = BufferIO::Read<uint8_t>(pbuf);
+int forced = BufferIO::Read<uint8_t>(pbuf);
+flag |= forced << 8;
+code = BufferIO::Read<int32_t>(pbuf);
+uint32_t info = BufferIO::Read<uint32_t>(pbuf);
+int controller = info & 0xff;
+l = (info >> 8) & 0xff;
+s = (info >> 16) & 0xff;
+ss = (info >> 24) & 0xff;
+desc = BufferIO::Read<int32_t>(pbuf);
+c = mainGame->LocalPlayer(controller);
+pcard = mainGame->dField.GetCard(c, l, s, ss);
+if(!pcard) {
+pcard = new ClientCard();
+mainGame->dField.limbo_temp.push_back(pcard);
+pcard->owner = c;
+pcard->controler = c;
+pcard->location = static_cast<unsigned char>(l);
+pcard->sequence = static_cast<unsigned char>(s);
+pcard->position = static_cast<unsigned char>(ss);
+if(code)
+pcard->SetCode(code);
+panelmode = true;
+}
+mainGame->dField.activatable_cards.push_back(pcard);
+mainGame->dField.activatable_descs.push_back(std::make_pair(desc, flag));
+pcard->is_selected = false;
+if(forced) {
+mainGame->dField.chain_forced = true;
+}
+if(flag & EDESC_OPERATION) {
+pcard->chain_code = code;
+mainGame->dField.conti_cards.push_back(pcard);
+mainGame->dField.conti_act = true;
+conti_exist = true;
+} else {
+pcard->is_selectable = true;
+if(flag & EDESC_RESET)
+pcard->cmdFlag |= COMMAND_RESET;
+else
+pcard->cmdFlag |= COMMAND_ACTIVATE;
+if(pcard->location == LOCATION_DECK) {
+pcard->SetCode(code);
+mainGame->dField.deck_act[c] = true;
+} else if(l == LOCATION_GRAVE)
+mainGame->dField.grave_act[c] = true;
+else if(l == LOCATION_REMOVED)
+mainGame->dField.remove_act[c] = true;
+else if(l == LOCATION_EXTRA)
+mainGame->dField.extra_act[c] = true;
+else if(l == LOCATION_OVERLAY)
+panelmode = true;
+}
+}
 		if(!select_trigger && !mainGame->dField.chain_forced && (mainGame->ignore_chain || ((count == 0 || specount == 0) && !mainGame->always_chain)) && (count == 0 || !mainGame->chain_when_avail)) {
 			SetResponseI(-1);
 			mainGame->dField.ClearChainSelect();
