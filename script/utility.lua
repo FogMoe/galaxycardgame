@@ -2093,7 +2093,7 @@ function Galaxy.InitializeHp(e,tp,eg,ep,ev,re,r,rp)
 	e2:SetProperty(EFFECT_FLAG_CANNOT_DISABLE)
 	e2:SetOperation(Galaxy.CalculateHp)
 	e2:SetReset(RESET_EVENT + RESETS_STANDARD)
-	e2:SetLabel(hp, hp)
+	e2:SetLabel(hp, hp, 0) -- 存储：原始最大HP，当前最大HP，上次EFFECT_UPDATE_HP效果总和
 	e2:SetLabelObject(e1)
 	c:RegisterEffect(e2)
 	return false
@@ -2103,7 +2103,7 @@ end
 function Galaxy.CalculateHp(e,tp,eg,ep,ev,re,r,rp)
 	local c = e:GetHandler()
 	local now_hp = c:GetHp()
-	local hp_max_ori, hp_max_now = e:GetLabel()
+	local hp_max_ori, hp_max_now, last_effect_total = e:GetLabel() -- 获取：原始最大HP，当前最大HP，上次效果总和
 	local val = c:GetFlagEffectLabel(FLAG_ADD_HP_IMMEDIATELY_BATTLE)
 	if val then
 		now_hp = Galaxy.CalculateAddHpImmediately(c, val, now_hp, hp_max_now)
@@ -2125,45 +2125,80 @@ function Galaxy.CalculateHp(e,tp,eg,ep,ev,re,r,rp)
 		c:ResetFlagEffect(FLAG_ADD_HP_IMMEDIATELY_EFFECT)
 	end
 	local hp_adds = {c:IsHasEffect(EFFECT_UPDATE_HP)}
+
+	-- 确保上次效果总和已初始化
+	if not last_effect_total then
+		last_effect_total = 0
+	end
+
+	-- 计算当前所有EFFECT_UPDATE_HP效果的总和
+	local current_effect_total = 0
 	if hp_adds[1] then
-		local add_total = 0
 		for _, ei in ipairs(hp_adds) do
 			val = ei:GetValue()
 			if type(val) == "function" then
-				val = val(ei, c)
+				val = val(ei, c) -- 支持动态值函数
 			elseif not val then
 				val = 0
 			end
-			add_total = add_total + val
+			current_effect_total = current_effect_total + val
 		end
-		if rev then add_total = - add_total end
-		add_total = hp_max_ori + add_total - hp_max_now
-		if add_total ~= 0 then
-			hp_max_now = hp_max_now + add_total
-			e:SetLabel(hp_max_ori, hp_max_now)
-			now_hp = now_hp + add_total
-			if now_hp < 0 then
-				now_hp = 0
-			elseif now_hp > hp_max_now then
-				now_hp = hp_max_now
-			end
-		end
+		if rev then current_effect_total = - current_effect_total end -- 反转效果支持
 	end
+
+	-- 计算本次效果变化量：当前总和 - 上次记录的总和
+	-- 这样可以正确处理效果的增加、减少和消失
+	local effect_delta = current_effect_total - last_effect_total
+
+	if effect_delta ~= 0 then
+		-- 应用最大生命值变化
+		hp_max_now = hp_max_now + effect_delta
+
+		-- EFFECT_UPDATE_HP分离机制：
+		-- 1. 最大生命值变化总是应用
+		-- 2. 当前生命值只在效果增加时立即增加
+		-- 3. 效果减少时不强制减少当前生命值，除非超过新上限
+		if effect_delta > 0 then
+			-- 获得增益：当前生命值立即增加相同数值
+			now_hp = now_hp + effect_delta
+		end
+		-- 失去增益：当前生命值保持不变，只有超过新上限时才会被调整
+
+		-- 保存新的状态数据
+		e:SetLabel(hp_max_ori, hp_max_now, current_effect_total)
+	end
+
+	-- 三重安全检查确保生命值系统的健壮性：
+
+	-- 检查1：最大生命值 <= 0 导致死亡
+	if hp_max_now <= 0 then
+		Duel.Destroy(c, REASON_RULE)
+		return
+	end
+
+	-- 检查2：强制当前生命值不超过最大生命值上限
+	if now_hp > hp_max_now then
+		now_hp = hp_max_now
+	end
+
+	-- 检查3：当前生命值 <= 0 导致死亡
 	if now_hp <= 0 then
 		Duel.Destroy(c, REASON_RULE)
 		return
 	end
+
 	e:GetLabelObject():SetValue(now_hp)
 end
 
 --计算护盾
 function Galaxy.CalculateAddHpImmediately(c, val, hp, hp_max)
 	local shield = c:IsHasEffect(EFFECT_SHIELD)
+	-- 护盾机制：只阻挡伤害（负值），不阻挡治疗（正值）
 	if val < 0 and shield then
-		shield:Reset()
+		shield:Reset() -- 消耗护盾
 		Duel.Hint(HINT_CARD, 0, c:GetCode())
 		Galaxy.RemoveShieldDisplay(c)
-		return hp
+		return hp -- 伤害被完全阻挡，生命值不变
 	end
 	hp = hp + val
 	if hp > hp_max then
