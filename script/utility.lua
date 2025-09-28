@@ -2040,6 +2040,15 @@ function Galaxy.UnitRule(c)
 	e5:SetProperty(property)
 	e5:SetValue(Galaxy.SummonPositionLimit)
 	c:RegisterEffect(e5)
+	--潜行单位不能成为攻击目标
+	local e6 = Effect.CreateEffect(c)
+	e6:SetType(EFFECT_TYPE_SINGLE)
+	e6:SetProperty(EFFECT_FLAG_SINGLE_RANGE)
+	e6:SetRange(LOCATION_MZONE)
+	e6:SetCode(EFFECT_CANNOT_BE_BATTLE_TARGET)
+	e6:SetCondition(Galaxy.StealthAttackLimit)
+	e6:SetValue(aux.imval1)
+	c:RegisterEffect(e6)
 end
 
 --特殊召唤条件：检查场地和代价是否足够
@@ -2321,13 +2330,6 @@ function Galaxy.BattleRule(c)
 	e4:SetTargetRange(LOCATION_MZONE, LOCATION_MZONE)
 	e4:SetValue(Galaxy.ProtectAttackLimit)
 	Duel.RegisterEffect(e4, 0)
-	--潜行单位不能成为攻击目标
-	local e5 = Effect.CreateEffect(c)
-	e5:SetType(EFFECT_TYPE_FIELD)
-	e5:SetCode(EFFECT_CANNOT_SELECT_BATTLE_TARGET)
-	e5:SetTargetRange(LOCATION_MZONE, LOCATION_MZONE)
-	e5:SetValue(Galaxy.StealthAttackLimit)
-	Duel.RegisterEffect(e5, 0)
 	--潜行单位不能成为效果的对象
 	local e6 = Effect.CreateEffect(c)
 	e6:SetType(EFFECT_TYPE_FIELD)
@@ -2343,6 +2345,12 @@ function Galaxy.BattleRule(c)
 	e7:SetCode(EVENT_ATTACK_ANNOUNCE)
 	e7:SetOperation(Galaxy.RemoveStealthAfterAttack)
 	Duel.RegisterEffect(e7, 0)
+	--发动效果后移除潜行
+	local e8 = Effect.CreateEffect(c)
+	e8:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
+	e8:SetCode(EVENT_CHAINING)
+	e8:SetOperation(Galaxy.RemoveStealthAfterActivation)
+	Duel.RegisterEffect(e8, 0)
 end
 
 --在本回合召唤
@@ -2403,7 +2411,10 @@ end
 
 --潜行单位不能成为攻击目标
 function Galaxy.StealthAttackLimit(e,c)
-	return c:IsHasEffect(EFFECT_STEALTH)
+	if not c then
+		c = e:GetHandler()
+	end
+	return c and c:IsHasEffect(EFFECT_STEALTH)
 end
 
 --潜行单位不能成为效果的对象
@@ -2419,6 +2430,18 @@ function Galaxy.RemoveStealthAfterAttack(e,tp,eg,ep,ev,re,r,rp)
 		if stealth_effect then
 			stealth_effect:Reset()
 			Galaxy.RemoveStealthDisplay(atker)
+		end
+	end
+end
+
+--发动效果后移除潜行
+function Galaxy.RemoveStealthAfterActivation(e,tp,eg,ep,ev,re,r,rp)
+	local tc = re:GetHandler()
+	if tc and tc:IsHasEffect(EFFECT_STEALTH) and tc:IsLocation(LOCATION_MZONE) then
+		local stealth_effect = tc:IsHasEffect(EFFECT_STEALTH)
+		if stealth_effect then
+			stealth_effect:Reset()
+			Galaxy.RemoveStealthDisplay(tc)
 		end
 	end
 end
@@ -2571,9 +2594,29 @@ function Galaxy.RaiseHpEvent(c, hp_change, is_effect_change, reason, effect_play
 		event_code = GALAXY_EVENT_HP_DAMAGE
 	end
 
-	-- 立即触发事件
+	-- 立即触发事件（同时兼容场地与单体监听）
+	local event_value = math.abs(hp_change)
+	local reason_flag = reason or REASON_EFFECT
+	local event_player = c:GetControler()
+	local responsible_player = event_player
+
+	-- 战斗伤害：责任玩家取攻击方控制者
+	if reason_flag & REASON_BATTLE ~= 0 then
+		local atker = Duel.GetAttacker()
+		if atker then responsible_player = atker:GetControler() end
+	else
+		-- 若指定了 effect_player，则用该玩家作为责任方
+		if effect_player ~= nil then responsible_player = effect_player end
+	end
+
 	local group = Group.FromCards(c)
-	Duel.RaiseEvent(group, event_code, nil, reason or REASON_EFFECT, effect_player or 0, effect_player or 0, math.abs(hp_change))
+	-- 场效果/全局监听
+	Duel.RaiseEvent(group, event_code, nil, reason_flag, responsible_player, event_player, event_value)
+	-- 单体效果监听（如 EFFECT_TYPE_SINGLE 触发）
+	Duel.RaiseSingleEvent(c, event_code, nil, reason_flag, responsible_player, event_player, event_value)
+
+	-- 调整以确保 HP 变化即时生效
+	Duel.AdjustInstantly(c)
 end
 
 --[[
