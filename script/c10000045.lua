@@ -86,13 +86,8 @@ function s.damop(e,tp,eg,ep,ev,re,r,rp)
 	if bc and bc:IsRelateToBattle() and bc:IsFaceup() then
 		local dam=bc:GetHp()
 		if dam>0 then
-			--降低对方怪兽的守备力（HP）
-			local e1=Effect.CreateEffect(e:GetHandler())
-			e1:SetType(EFFECT_TYPE_SINGLE)
-			e1:SetCode(EFFECT_UPDATE_HP)
-			e1:SetValue(-dam)
-			e1:SetReset(RESET_EVENT+RESETS_STANDARD)
-			bc:RegisterEffect(e1)
+			--对战斗目标造成等于其当前生命值的伤害
+			Duel.AddHp(bc, -dam, REASON_EFFECT)
 		end
 	end
 end
