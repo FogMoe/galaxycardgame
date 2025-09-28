@@ -17,6 +17,11 @@ function s.initial(c)
 	e2:SetCode(EVENT_BE_BATTLE_TARGET)
 	e2:SetProperty(EFFECT_FLAG_NO_TURN_RESET)
 	e2:SetCountLimit(1)
+	--生命不满才能发动
+	e2:SetCondition(function(e,tp,eg,ep,ev,re,r,rp)
+		local c=e:GetHandler()
+		return c:IsLocation(LOCATION_MZONE) and c:GetHp()<c:GetMaxHp()
+	end)
 	e2:SetOperation(s.recop)
 	c:RegisterEffect(e2)
 
@@ -50,12 +55,12 @@ function s.recop(e,tp,eg,ep,ev,re,r,rp)
 	end
 end
 
---检查生命值恢复是否涉及自己
+--检查生命值恢复是否涉及自己并且补给没满
 function s.supplycon(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
 	if not c:IsLocation(LOCATION_MZONE) then return false end
 	--检查恢复的目标中是否包含自己
-	return eg:IsContains(c)
+	return eg:IsContains(c) and Duel.GetSupply(tp)<Duel.GetMaxSupply(tp)
 end
 
 --将补给恢复到最大上限

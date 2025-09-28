@@ -668,6 +668,9 @@ EFFECT_LETHAL = 506 --致命：战斗后若目标无护盾则直接击杀
 EFFECT_STEALTH = 507 --潜行：不能成为攻击和效果的对象，攻击后移除
 EFFECT_STEALTH_HINT = 508 --潜行提示
 
+--自定义事件基础常量
+EVENT_CUSTOM = 0x10000000 --自訂事件
+
 --Galaxy HP事件系统（使用EVENT_CUSTOM机制，使用Galaxy专用范围避免冲突）
 GALAXY_EVENT_HP_DAMAGE = EVENT_CUSTOM + 99000001   -- 怪兽受到立即伤害事件（AddHp负值）
 GALAXY_EVENT_HP_RECOVER = EVENT_CUSTOM + 99000002  -- 怪兽立即恢复生命值事件（AddHp正值）
@@ -749,7 +752,6 @@ EVENT_PHASE	  =0x1000 --阶段结束时
 EVENT_PHASE_START		  =0x2000 --阶段开始时
 EVENT_ADD_COUNTER		  =0x10000 --增加指示物时
 EVENT_REMOVE_COUNTER			=0x20000	--去除指示物时(A指示物)，Card.RemoveCounter()必須手動觸發此事件
-EVENT_CUSTOM					=0x10000000 --自訂事件
 
 --Category  效果分类（表示这个效果将要发生什么事，OperationInfo设置了效果分类才能触发针对这一类型发动的卡，如破坏->星尘龙
 CATEGORY_DESTROY			=0x1		--破坏效果
