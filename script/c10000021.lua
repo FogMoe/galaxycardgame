@@ -16,7 +16,7 @@ function s.defop(e,tp,eg,ep,ev,re,r,rp)
 	if c:IsRelateToBattle() and c:IsFaceup() then
 		local e1=Effect.CreateEffect(c)
 		e1:SetType(EFFECT_TYPE_SINGLE)
-		e1:SetCode(EFFECT_UPDATE_DEFENSE)
+		e1:SetCode(EFFECT_UPDATE_HP)
 		e1:SetReset(RESET_EVENT+RESETS_STANDARD)
 		e1:SetValue(1)
 		c:RegisterEffect(e1)

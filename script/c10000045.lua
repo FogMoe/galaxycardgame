@@ -39,7 +39,7 @@ function s.activate(e,tp,eg,ep,ev,re,r,rp)
 		e1:SetValue(2)
 		tc:RegisterEffect(e1)
 		local e2=e1:Clone()
-		e2:SetCode(EFFECT_UPDATE_DEFENSE)
+		e2:SetCode(EFFECT_UPDATE_HP)
 		tc:RegisterEffect(e2)
 
 		--战斗时额外伤害
@@ -89,7 +89,7 @@ function s.damop(e,tp,eg,ep,ev,re,r,rp)
 			--降低对方怪兽的守备力（HP）
 			local e1=Effect.CreateEffect(e:GetHandler())
 			e1:SetType(EFFECT_TYPE_SINGLE)
-			e1:SetCode(EFFECT_UPDATE_DEFENSE)
+			e1:SetCode(EFFECT_UPDATE_HP)
 			e1:SetValue(-dam)
 			e1:SetReset(RESET_EVENT+RESETS_STANDARD)
 			bc:RegisterEffect(e1)

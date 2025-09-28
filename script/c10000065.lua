@@ -1,5 +1,5 @@
 --物质瓦解射线
---消耗3点补给，选择1个敌方单位，移出游戏外，给能放置的1个卡放1高能计数标记。
+--消耗4点补给，选择1个敌方单位，移出游戏外，给能放置的1个卡放1高能计数标记。
 local s, id = Import()
 function s.initial(c)
 	-- 发动效果
@@ -15,10 +15,10 @@ function s.initial(c)
 	c:RegisterEffect(e1)
 end
 
--- 消耗：3点补给
+-- 消耗：4点补给
 function s.cost(e,tp,eg,ep,ev,re,r,rp,chk)
-	if chk==0 then return Duel.CheckSupplyCost(tp, 3) end
-	Duel.PaySupplyCost(tp, 3)
+	if chk==0 then return Duel.CheckSupplyCost(tp, 4) end
+	Duel.PaySupplyCost(tp, 4)
 end
 
 -- 目标：选择1个敌方单位

@@ -22,12 +22,7 @@ function s.activate(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
 	local g=Duel.GetMatchingGroup(Card.IsFaceup,tp,0,LOCATION_MZONE,nil)
 	for tc in aux.Next(g) do
-		local e1=Effect.CreateEffect(c)
-		e1:SetType(EFFECT_TYPE_SINGLE)
-		e1:SetCode(EFFECT_UPDATE_DEFENSE)
-		e1:SetReset(RESET_EVENT+RESETS_STANDARD)
-		e1:SetValue(-1)
-		tc:RegisterEffect(e1)
+		Duel.AddHp(tc, -1, REASON_EFFECT)
 	end
 	--那之后，可以再消耗3点补给，再减少对方全部怪兽1点def
 	if Duel.CheckSupplyCost(tp,3) and Duel.SelectYesNo(tp,aux.Stringid(id,0)) then
@@ -35,12 +30,7 @@ function s.activate(e,tp,eg,ep,ev,re,r,rp)
 		Duel.PaySupplyCost(tp,3)
 		local g2=Duel.GetMatchingGroup(Card.IsFaceup,tp,0,LOCATION_MZONE,nil)
 		for tc in aux.Next(g2) do
-			local e2=Effect.CreateEffect(c)
-			e2:SetType(EFFECT_TYPE_SINGLE)
-			e2:SetCode(EFFECT_UPDATE_DEFENSE)
-			e2:SetReset(RESET_EVENT+RESETS_STANDARD)
-			e2:SetValue(-1)
-			tc:RegisterEffect(e2)
+			Duel.AddHp(tc, -1, REASON_EFFECT)
 		end
 	end
 end

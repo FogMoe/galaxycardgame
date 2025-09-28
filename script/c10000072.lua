@@ -50,7 +50,7 @@ function s.activate(e,tp,eg,ep,ev,re,r,rp)
 				tc:RegisterEffect(e1)
 				--防御力+1
 				local e2=e1:Clone()
-				e2:SetCode(EFFECT_UPDATE_DEFENSE)
+				e2:SetCode(EFFECT_UPDATE_HP)
 				tc:RegisterEffect(e2)
 				tc=tokens:GetNext()
 			end

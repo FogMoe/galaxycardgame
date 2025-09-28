@@ -25,7 +25,7 @@ function s.initial(c)
 	c:RegisterEffect(e2)
 
 	local e3=e2:Clone()
-	e3:SetCode(EFFECT_UPDATE_DEFENSE)
+	e3:SetCode(EFFECT_UPDATE_HP)
 	e3:SetValue(1)
 	c:RegisterEffect(e3)
 

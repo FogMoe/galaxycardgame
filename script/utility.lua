@@ -2011,37 +2011,39 @@ function Galaxy.UnitRule(c)
 	e1:SetCondition(Galaxy.SummonCondition)
 	e1:SetOperation(Galaxy.SummonOperation)  --在这里支付代价
 	c:RegisterEffect(e1)
-	--生命为 0 时自动破坏
+	--禁止战斗破坏
 	local e2 = Effect.CreateEffect(c)
 	e2:SetType(EFFECT_TYPE_SINGLE)
 	e2:SetProperty(property + EFFECT_FLAG_SINGLE_RANGE)
 	e2:SetRange(LOCATION_MZONE)
-	e2:SetCode(EFFECT_SELF_DESTROY)
-	e2:SetCondition(Galaxy.SelfDestroy)
+	e2:SetCode(EFFECT_INDESTRUCTABLE_BATTLE)
+	e2:SetValue(1)
 	c:RegisterEffect(e2)
-	--禁止战斗破坏
-	local e3 = Effect.CreateEffect(c)
-	e3:SetType(EFFECT_TYPE_SINGLE)
-	e3:SetProperty(property + EFFECT_FLAG_SINGLE_RANGE)
-	e3:SetRange(LOCATION_MZONE)
-	e3:SetCode(EFFECT_INDESTRUCTABLE_BATTLE)
-	e3:SetValue(1)
-	c:RegisterEffect(e3)
 	--护盾效果显示管理
-	local e4 = Effect.CreateEffect(c)
-	e4:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
-	e4:SetRange(LOCATION_MZONE)
-	e4:SetProperty(EFFECT_FLAG_SINGLE_RANGE)
-	e4:SetCode(EVENT_SPSUMMON_SUCCESS)
-	e4:SetCondition(Galaxy.AddShieldDisplay)
+	local e3 = Effect.CreateEffect(c)
+	e3:SetType(EFFECT_TYPE_SINGLE + EFFECT_TYPE_CONTINUOUS)
+	e3:SetCode(EVENT_SPSUMMON_SUCCESS)
+	e3:SetCondition(Galaxy.AddShieldDisplay)
+	c:RegisterEffect(e3)
+	--生命值设置
+	local e4 = e3:Clone()
+	e4:SetCondition(Galaxy.InitializeHp)
 	c:RegisterEffect(e4)
+	--限制特殊召唤表示：只能以攻击表示进入场上
+	local e5 = Effect.CreateEffect(c)
+	e5:SetType(EFFECT_TYPE_SINGLE)
+	e5:SetCode(EFFECT_LIMIT_SPECIAL_SUMMON_POSITION)
+	e5:SetProperty(property)
+	e5:SetValue(Galaxy.SummonPositionLimit)
+	c:RegisterEffect(e5)
 end
 
 --特殊召唤条件：检查场地和代价是否足够
 function Galaxy.SummonCondition(e,c)
 	if c == nil then return true end
 	local tp = c:GetControler()
-	return Duel.GetLocationCount(tp, LOCATION_MZONE) > 0 and (Duel.CheckSupplyCost(tp, c:GetSupplyCost()) or c:IsHasEffect(EFFECT_FREE_DEPLOY))
+	if Duel.GetLocationCount(tp, LOCATION_MZONE) == 0 then return false end
+	return Duel.CheckSupplyCost(tp, c:GetSupplyCost()) or c:IsHasEffect(EFFECT_FREE_DEPLOY)
 end
 
 --特殊召唤操作：在召唤过程中支付代价
@@ -2049,12 +2051,127 @@ function Galaxy.SummonOperation(e,tp,eg,ep,ev,re,r,rp,c)
 	local cost = c:GetSupplyCost()
 	if c:IsHasEffect(EFFECT_FREE_DEPLOY) then cost = 0 end
 	if cost > 0 then Duel.PaySupplyCost(tp, cost) end
-	return true
 end
 
---生命值为 0 时的自动破坏条件
-function Galaxy.SelfDestroy(e)
-	return e:GetHandler():IsHpBelow(0)
+--特殊召唤表示限制：禁止以守备表示召唤
+function Galaxy.SummonPositionLimit(e,c,sump,sumtype,sumpos,targetp)
+	return bit.band(sumpos,POS_FACEUP_DEFENSE+POS_FACEDOWN_DEFENSE)~=0
+end
+
+--护盾效果显示管理
+function Galaxy.AddShieldDisplay(e,tp,eg,ep,ev,re,r,rp)
+	local c = e:GetHandler()
+	if not c:IsLocation(LOCATION_MZONE) or not c:IsHasEffect(EFFECT_SHIELD)
+		or c:IsHasEffect(EFFECT_SHIELD_HINT) then return false end
+	local e1 = Effect.CreateEffect(c)
+	e1:SetDescription(aux.Stringid(10000077,2)) --护盾显示提示文本
+	e1:SetType(EFFECT_TYPE_SINGLE)
+	e1:SetCode(EFFECT_SHIELD_HINT) --护盾显示标识码
+	e1:SetProperty(EFFECT_FLAG_SINGLE_RANGE + EFFECT_FLAG_CLIENT_HINT)
+	e1:SetRange(GALAXY_LOCATION_UNIT_ZONE)
+	e1:SetReset(RESET_EVENT + RESETS_STANDARD)
+	c:RegisterEffect(e1)
+	return false
+end
+
+--生命值设置
+function Galaxy.InitializeHp(e,tp,eg,ep,ev,re,r,rp)
+	local c = e:GetHandler()
+	if not c:IsLocation(LOCATION_MZONE) then return false end
+	local hp = c:GetBaseHp()
+	local e1 = Effect.CreateEffect(c)
+	e1:SetType(EFFECT_TYPE_SINGLE)
+	e1:SetCode(EFFECT_SET_DEFENSE)
+	e1:SetValue(hp)
+	e1:SetProperty(EFFECT_FLAG_CANNOT_DISABLE)
+	e1:SetReset(RESET_EVENT + RESETS_STANDARD)
+	c:RegisterEffect(e1)
+	local e2 = Effect.CreateEffect(c)
+	e2:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
+	e2:SetCode(EVENT_ADJUST)
+	e2:SetRange(LOCATION_MZONE)
+	e2:SetProperty(EFFECT_FLAG_CANNOT_DISABLE)
+	e2:SetOperation(Galaxy.CalculateHp)
+	e2:SetReset(RESET_EVENT + RESETS_STANDARD)
+	e2:SetLabel(hp, hp)
+	e2:SetLabelObject(e1)
+	c:RegisterEffect(e2)
+	return false
+end
+
+--生命值计算
+function Galaxy.CalculateHp(e,tp,eg,ep,ev,re,r,rp)
+	local c = e:GetHandler()
+	local now_hp = c:GetHp()
+	local hp_max_ori, hp_max_now = e:GetLabel()
+	local val = c:GetFlagEffectLabel(FLAG_ADD_HP_IMMEDIATELY_BATTLE)
+	if val then
+		now_hp = Galaxy.CalculateAddHpImmediately(c, val, now_hp, hp_max_now)
+		if now_hp <= 0 then
+			Duel.Destroy(c, REASON_RULE)
+			return
+		end
+		c:ResetFlagEffect(FLAG_ADD_HP_IMMEDIATELY_BATTLE)
+	end
+	local rev = c:IsHasEffect(EFFECT_REVERSE_UPDATE)
+	val = c:GetFlagEffectLabel(FLAG_ADD_HP_IMMEDIATELY_EFFECT)
+	if val then
+		if rev then val = -val end
+		now_hp = Galaxy.CalculateAddHpImmediately(c, val, now_hp, hp_max_now)
+		if now_hp <= 0 then
+			Duel.Destroy(c, REASON_RULE)
+			return
+		end
+		c:ResetFlagEffect(FLAG_ADD_HP_IMMEDIATELY_EFFECT)
+	end
+	local hp_adds = {c:IsHasEffect(EFFECT_UPDATE_HP)}
+	if hp_adds[1] then
+		local add_total = 0
+		for _, ei in ipairs(hp_adds) do
+			val = ei:GetValue()
+			if type(val) == "function" then
+				val = val(ei, c)
+			elseif not val then
+				val = 0
+			end
+			add_total = add_total + val
+		end
+		if rev then add_total = - add_total end
+		add_total = hp_max_ori + add_total - hp_max_now
+		if add_total ~= 0 then
+			hp_max_now = hp_max_now + add_total
+			e:SetLabel(hp_max_ori, hp_max_now)
+			now_hp = now_hp + add_total
+			if now_hp < 0 then
+				now_hp = 0
+			elseif now_hp > hp_max_now then
+				now_hp = hp_max_now
+			end
+		end
+	end
+	if now_hp <= 0 then
+		Duel.Destroy(c, REASON_RULE)
+		return
+	end
+	e:GetLabelObject():SetValue(now_hp)
+end
+
+--计算护盾
+function Galaxy.CalculateAddHpImmediately(c, val, hp, hp_max)
+	local shield = c:IsHasEffect(EFFECT_SHIELD)
+	if val < 0 and shield then
+		shield:Reset()
+		Duel.Hint(HINT_CARD, 0, c:GetCode())
+		Galaxy.RemoveShieldDisplay(c)
+		return hp
+	end
+	hp = hp + val
+	if hp > hp_max then
+		hp = hp_max
+	elseif hp <= 0 then
+		hp = 0
+	end
+	return hp
 end
 
 --玩家规则
@@ -2120,7 +2237,6 @@ function Galaxy.BattleRule(c)
 	e2:SetCode(EVENT_DAMAGE_STEP_END)
 	e2:SetProperty(property)
 	e2:SetCondition(Galaxy.ReduceHP)
-	e2:SetOperation(Galaxy.ReduceHPDestroy)
 	Duel.RegisterEffect(e2, 0)
 	--不造成战斗伤害
 	local e3 = Effect.CreateEffect(c)
@@ -2145,84 +2261,16 @@ function Galaxy.SummonThisTurn(e,c)
 		or c:IsStatus(STATUS_FLIP_SUMMON_TURN) or c:IsStatus(STATUS_SPSUMMON_TURN))
 end
 
---护盾效果显示管理
-function Galaxy.AddShieldDisplay(e,tp,eg,ep,ev,re,r,rp,c)
-	local c = e:GetHandler()
-	if c:IsLocation(LOCATION_MZONE) and c:IsHasEffect(EFFECT_SHIELD) and not c:IsHasEffect(EFFECT_SHIELD_HINT)	then
-		if c then
-			--Debug.Message("AddShieldDisplay")
-			local e_hint=Effect.CreateEffect(c)
-			e_hint:SetDescription(aux.Stringid(10000077,2)) --护盾显示提示文本
-			e_hint:SetType(EFFECT_TYPE_SINGLE)
-			e_hint:SetCode(EFFECT_SHIELD_HINT) --护盾显示标识码
-			e_hint:SetProperty(EFFECT_FLAG_SINGLE_RANGE+EFFECT_FLAG_CLIENT_HINT)
-			e_hint:SetRange(GALAXY_LOCATION_UNIT_ZONE)
-			e_hint:SetReset(RESET_EVENT+RESETS_STANDARD)
-			c:RegisterEffect(e_hint)
-		end	
-		return true
-	else return false end
-end
-
---移除护盾显示
-function Galaxy.RemoveShieldDisplay(c)
-	local shield_display = c:IsHasEffect(EFFECT_SHIELD_HINT)
-	if shield_display then
-		shield_display:Reset()
-	end
-end
-
 --伤害步骤结束时处理守备力减少（仅怪兽对怪兽战斗时）
 function Galaxy.ReduceHP(e,tp,eg,ep,ev,re,r,rp)
 	local atker = Duel.GetAttacker()
 	local defer = Duel.GetAttackTarget()
 	if not (atker and defer) then return false end
-	local e1 = Effect.CreateEffect(atker)
-	e1:SetType(EFFECT_TYPE_SINGLE)
-	e1:SetCode(EFFECT_UPDATE_DEFENSE)
-	-- 如果有护盾效果且攻击力大于0，则不减少生命值
-	if atker:IsHasEffect(EFFECT_SHIELD) and defer:GetAttack() > 0 then
-		e1:SetValue(0)
-		local shield_eff = atker:IsHasEffect(EFFECT_SHIELD)
-		shield_eff:Reset()
-		--显示护盾生效提示
-		Duel.Hint(HINT_CARD,0,atker:GetCode())
-		--移除护盾显示效果
-		Galaxy.RemoveShieldDisplay(atker)
-
-	else
-		e1:SetValue(-defer:GetAttack())
-	end
-	e1:SetProperty(EFFECT_FLAG_CANNOT_DISABLE)
-	e1:SetReset(RESET_EVENT+RESETS_STANDARD)
-	atker:RegisterEffect(e1)
-	local e2 = e1:Clone()
-	-- 如果有护盾效果且攻击力大于0，则不减少生命值
-	if defer:IsHasEffect(EFFECT_SHIELD) and atker:GetAttack() > 0 then
-		e2:SetValue(0)
-		local shield_eff = defer:IsHasEffect(EFFECT_SHIELD)
-		shield_eff:Reset()
-		--显示护盾生效提示
-		Duel.Hint(HINT_CARD,0,defer:GetCode())
-		--移除护盾显示效果
-		Galaxy.RemoveShieldDisplay(defer)
-	else
-		e2:SetValue(-atker:GetAttack())
-	end
-	defer:RegisterEffect(e2)
-	return true
-end
-
-function Galaxy.ReduceHPDestroy(e,tp,eg,ep,ev,re,r,rp)
-	local atker = Duel.GetAttacker()
-	local defer = Duel.GetAttackTarget()
-	if atker and atker:IsHpBelow(0) then
-		Duel.Destroy(atker, REASON_RULE)
-	end
-	if defer and defer:IsHpBelow(0) then
-		Duel.Destroy(defer, REASON_RULE)
-	end
-	--记录战斗的双方卡片 （用于后续效果，如亡语破坏杀死这张卡的单位等）
+	local atk_dam = defer:GetAttack()
+	local def_dam = atker:GetAttack()
+	Duel.AddHp(atker, -atk_dam, REASON_BATTLE)
+	Duel.AddHp(defer, -def_dam, REASON_BATTLE)
+	return false
 end
 
 --不造成战斗伤害（如果有攻击目标，说明非直接攻击玩家，阻止伤害）
@@ -2296,6 +2344,41 @@ Card.IsGalaxyCategory = Card.IsRace
 Card.GetGalaxyCategory = Card.GetRace
 Card.GetOriginalGalaxyCategory = Card.GetOriginalRace
 
+--==============================================
+-- Galaxy 函数
+--==============================================
+
+--移除护盾显示
+function Galaxy.RemoveShieldDisplay(c)
+	local shield_display = c:IsHasEffect(EFFECT_SHIELD_HINT)
+	if shield_display then
+		shield_display:Reset()
+	end
+end
+
+--立刻增减生命力
+function Duel.AddHp(g_c, hp, reason)
+	local typ = aux.GetValueType(g_c)
+	if typ == "Card" then
+		g_c = Group.FromCards(g_c)
+	elseif typ ~= "Group" then
+		error("parameter 1 should be Card or Group", 2)
+	end
+	if aux.GetValueType(hp) ~= "number" then error("parameter 2 should be number", 2) end
+	local flag = 0
+	if aux.GetValueType(reason) ~= "number" then
+		error("parameter 3 should be number", 2)
+	elseif reason & REASON_BATTLE > 0  then
+		flag = FLAG_ADD_HP_IMMEDIATELY_BATTLE
+	elseif reason & REASON_EFFECT > 0  then
+		flag = FLAG_ADD_HP_IMMEDIATELY_EFFECT
+	else
+		error("parameter 3 should be REASON_BATTLE or REASON_EFFECT", 2)
+	end
+	for c in aux.Next(g_c) do
+		c:RegisterFlagEffect(flag, 0, EFFECT_FLAG_CANNOT_DISABLE, 1, hp)
+	end
+end
 --[[
 --==============================================
 -- 暂时无用
