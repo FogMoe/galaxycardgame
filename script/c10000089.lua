@@ -8,6 +8,8 @@ function s.initial(c)
 	e1:SetCategory(CATEGORY_SPECIAL_SUMMON+CATEGORY_COIN)
 	e1:SetType(EFFECT_TYPE_SINGLE+EFFECT_TYPE_TRIGGER_F)
 	e1:SetCode(EVENT_BE_BATTLE_TARGET)
+	e1:SetProperty(EFFECT_FLAG_NO_TURN_RESET)
+	e1:SetCountLimit(1)
 	e1:SetCondition(s.spcon)
 	e1:SetTarget(s.sptg)
 	e1:SetOperation(s.spop)
@@ -50,7 +52,8 @@ end
 --特殊召唤操作
 function s.spop(e,tp,eg,ep,ev,re,r,rp)
 	if Duel.GetLocationCount(tp,LOCATION_MZONE) <= 0 then return end
-
+	--添加已使用效果的客户端提示
+	e:GetHandler():RegisterFlagEffect(0,RESET_EVENT+RESETS_STANDARD,EFFECT_FLAG_CLIENT_HINT,1,0,aux.Stringid(id,1))
 	--掷硬币
 	local coin = Duel.TossCoin(tp,1)
 	if coin == 1 then  --正面时才特殊召唤

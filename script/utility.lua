@@ -2025,6 +2025,10 @@ function Galaxy.UnitRule(c)
 	e3:SetCode(EVENT_SPSUMMON_SUCCESS)
 	e3:SetCondition(Galaxy.AddShieldDisplay)
 	c:RegisterEffect(e3)
+	-- 潜行效果显示管理（与护盾类似，确保召唤进入场上的单位若带有潜行则显示客户端提示）
+	local e_stealth = e3:Clone()
+	e_stealth:SetCondition(Galaxy.AddStealthDisplay)
+	c:RegisterEffect(e_stealth)
 	--生命值设置
 	local e4 = e3:Clone()
 	e4:SetCondition(Galaxy.InitializeHp)
@@ -2106,7 +2110,7 @@ function Galaxy.CalculateHp(e,tp,eg,ep,ev,re,r,rp)
 	local hp_max_ori, hp_max_now, last_effect_total = e:GetLabel() -- 获取：原始最大HP，当前最大HP，上次效果总和
 	local val = c:GetFlagEffectLabel(FLAG_ADD_HP_IMMEDIATELY_BATTLE)
 	if val then
-		now_hp = Galaxy.CalculateAddHpImmediately(c, val, now_hp, hp_max_now)
+		now_hp = Galaxy.CalculateAddHpImmediately(c, val, now_hp, hp_max_now, REASON_BATTLE, 0)
 		if now_hp <= 0 then
 			Duel.Destroy(c, REASON_RULE)
 			return
@@ -2117,7 +2121,7 @@ function Galaxy.CalculateHp(e,tp,eg,ep,ev,re,r,rp)
 	val = c:GetFlagEffectLabel(FLAG_ADD_HP_IMMEDIATELY_EFFECT)
 	if val then
 		if rev then val = -val end
-		now_hp = Galaxy.CalculateAddHpImmediately(c, val, now_hp, hp_max_now)
+		now_hp = Galaxy.CalculateAddHpImmediately(c, val, now_hp, hp_max_now, REASON_EFFECT, rp)
 		if now_hp <= 0 then
 			Duel.Destroy(c, REASON_RULE)
 			return
@@ -2164,6 +2168,9 @@ function Galaxy.CalculateHp(e,tp,eg,ep,ev,re,r,rp)
 		end
 		-- 失去增益：当前生命值保持不变，只有超过新上限时才会被调整
 
+		-- 触发EFFECT_UPDATE_HP变化事件
+		Galaxy.RaiseHpEvent(c, effect_delta, true, REASON_EFFECT, rp or 0)
+
 		-- 保存新的状态数据
 		e:SetLabel(hp_max_ori, hp_max_now, current_effect_total)
 	end
@@ -2190,22 +2197,48 @@ function Galaxy.CalculateHp(e,tp,eg,ep,ev,re,r,rp)
 	e:GetLabelObject():SetValue(now_hp)
 end
 
---计算护盾
-function Galaxy.CalculateAddHpImmediately(c, val, hp, hp_max)
+--计算护盾并触发HP事件
+---@param c Card 怪兽卡
+---@param val number HP变化量
+---@param hp number 当前HP
+---@param hp_max number 最大HP
+---@param reason integer 原因（REASON_BATTLE 或 REASON_EFFECT）
+---@param effect_player integer 效果玩家
+function Galaxy.CalculateAddHpImmediately(c, val, hp, hp_max, reason, effect_player)
 	local shield = c:IsHasEffect(EFFECT_SHIELD)
 	-- 护盾机制：只阻挡伤害（负值），不阻挡治疗（正值）
 	if val < 0 and shield then
 		shield:Reset() -- 消耗护盾
 		Duel.Hint(HINT_CARD, 0, c:GetCode())
 		Galaxy.RemoveShieldDisplay(c)
+		-- 护盾阻挡伤害，不触发伤害事件
 		return hp -- 伤害被完全阻挡，生命值不变
 	end
+
+	-- 受到伤害时移除潜行效果
+	if val < 0 and c:IsHasEffect(EFFECT_STEALTH) then
+		local stealth_effect = c:IsHasEffect(EFFECT_STEALTH)
+		if stealth_effect then
+			stealth_effect:Reset()
+			Galaxy.RemoveStealthDisplay(c)
+			--Duel.Hint(HINT_CARD, 0, c:GetCode()) -- 提示潜行被破除
+		end
+	end
+
+	local old_hp = hp
 	hp = hp + val
 	if hp > hp_max then
 		hp = hp_max
 	elseif hp <= 0 then
 		hp = 0
 	end
+
+	-- 只有当HP实际发生变化时才触发AddHp事件
+	local actual_change = hp - old_hp
+	if actual_change ~= 0 then
+		Galaxy.RaiseHpEvent(c, actual_change, false, reason or REASON_EFFECT, effect_player or 0)
+	end
+
 	return hp
 end
 
@@ -2288,6 +2321,28 @@ function Galaxy.BattleRule(c)
 	e4:SetTargetRange(LOCATION_MZONE, LOCATION_MZONE)
 	e4:SetValue(Galaxy.ProtectAttackLimit)
 	Duel.RegisterEffect(e4, 0)
+	--潜行单位不能成为攻击目标
+	local e5 = Effect.CreateEffect(c)
+	e5:SetType(EFFECT_TYPE_FIELD)
+	e5:SetCode(EFFECT_CANNOT_SELECT_BATTLE_TARGET)
+	e5:SetTargetRange(LOCATION_MZONE, LOCATION_MZONE)
+	e5:SetValue(Galaxy.StealthAttackLimit)
+	Duel.RegisterEffect(e5, 0)
+	--潜行单位不能成为效果的对象
+	local e6 = Effect.CreateEffect(c)
+	e6:SetType(EFFECT_TYPE_FIELD)
+	e6:SetCode(EFFECT_CANNOT_BE_EFFECT_TARGET)
+	e6:SetTargetRange(LOCATION_MZONE, LOCATION_MZONE)
+	e6:SetTarget(Galaxy.StealthEffectTarget)
+	-- 只阻止对手成为潜行单位的效果对象，友方仍可选中
+	e6:SetValue(Auxiliary.tgoval)
+	Duel.RegisterEffect(e6, 0)
+	--攻击后移除潜行
+	local e7 = Effect.CreateEffect(c)
+	e7:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
+	e7:SetCode(EVENT_ATTACK_ANNOUNCE)
+	e7:SetOperation(Galaxy.RemoveStealthAfterAttack)
+	Duel.RegisterEffect(e7, 0)
 end
 
 --在本回合召唤
@@ -2303,8 +2358,29 @@ function Galaxy.ReduceHP(e,tp,eg,ep,ev,re,r,rp)
 	if not (atker and defer) then return false end
 	local atk_dam = defer:GetAttack()
 	local def_dam = atker:GetAttack()
-	Duel.AddHp(atker, -atk_dam, REASON_BATTLE)
-	Duel.AddHp(defer, -def_dam, REASON_BATTLE)
+	
+	-- 检查致命效果：如果攻击者有EFFECT_LETHAL，防御者受到致命伤害
+	local atker_has_lethal = atker:IsHasEffect(EFFECT_LETHAL)
+	local defer_has_lethal = defer:IsHasEffect(EFFECT_LETHAL)
+	
+	-- 对攻击者造成伤害（可能是致命的）
+	if defer_has_lethal then
+		-- 防御者有致命，攻击者受到致命伤害（攻击力 + 目标当前HP，确保击杀）
+		local lethal_damage = atk_dam + atker:GetHp()
+		Duel.AddHp(atker, -lethal_damage, REASON_BATTLE)
+	else
+		Duel.AddHp(atker, -atk_dam, REASON_BATTLE)
+	end
+	
+	-- 对防御者造成伤害（可能是致命的）
+	if atker_has_lethal then
+		-- 攻击者有致命，防御者受到致命伤害（攻击力 + 目标当前HP，确保击杀）
+		local lethal_damage = def_dam + defer:GetHp()
+		Duel.AddHp(defer, -lethal_damage, REASON_BATTLE)
+	else
+		Duel.AddHp(defer, -def_dam, REASON_BATTLE)
+	end
+	
 	return false
 end
 
@@ -2323,6 +2399,28 @@ function Galaxy.ProtectAttackLimit(e,c)
 	end
 	local tp = c:GetControler()
 	return Duel.IsExistingMatchingCard(Card.IsHasEffect,tp,LOCATION_MZONE,0,1,nil,EFFECT_PROTECT)
+end
+
+--潜行单位不能成为攻击目标
+function Galaxy.StealthAttackLimit(e,c)
+	return c:IsHasEffect(EFFECT_STEALTH)
+end
+
+--潜行单位不能成为效果的对象
+function Galaxy.StealthEffectTarget(e,c)
+	return c:IsHasEffect(EFFECT_STEALTH)
+end
+
+--攻击后移除潜行
+function Galaxy.RemoveStealthAfterAttack(e,tp,eg,ep,ev,re,r,rp)
+	local atker = Duel.GetAttacker()
+	if atker and atker:IsHasEffect(EFFECT_STEALTH) then
+		local stealth_effect = atker:IsHasEffect(EFFECT_STEALTH)
+		if stealth_effect then
+			stealth_effect:Reset()
+			Galaxy.RemoveStealthDisplay(atker)
+		end
+	end
 end
 
 --战术规则
@@ -2362,6 +2460,21 @@ Card.IsHpAbove = Card.IsDefenseAbove
 Card.IsHpBelow = Card.IsDefenseBelow
 Card.GetOriginalHp = Card.GetTextDefense
 
+-- 新增生命值相关函数
+-- 获取最大生命值（包含所有EFFECT_UPDATE_HP效果的动态最大值）
+function Card.GetMaxHp(c)
+	-- 查找Galaxy.CalculateHp注册的EVENT_ADJUST效果
+	local effects = {c:IsHasEffect(EVENT_ADJUST)}
+	for _, eff in ipairs(effects) do
+		if eff:GetOperation() == Galaxy.CalculateHp then
+			local hp_max_ori, hp_max_now, last_effect_total = eff:GetLabel()
+			return hp_max_now or c:GetOriginalHp()
+		end
+	end
+	-- 如果没找到HP计算系统，返回基础值basehp
+	return c:GetOriginalHp()
+end
+
 --获取/检查 补给代价相关
 Card.GetSupplyCost = Card.GetLevel
 Card.IsSupplyCost = Card.IsLevel
@@ -2391,6 +2504,30 @@ function Galaxy.RemoveShieldDisplay(c)
 	end
 end
 
+--潜行效果显示管理
+function Galaxy.AddStealthDisplay(e,tp,eg,ep,ev,re,r,rp)
+	local c = e:GetHandler()
+	if not c:IsLocation(LOCATION_MZONE) or not c:IsHasEffect(EFFECT_STEALTH)
+		or c:IsHasEffect(EFFECT_STEALTH_HINT) then return false end
+	local e1 = Effect.CreateEffect(c)
+	e1:SetDescription(aux.Stringid(10000077,3)) --潜行显示提示文本
+	e1:SetType(EFFECT_TYPE_SINGLE)
+	e1:SetCode(EFFECT_STEALTH_HINT) --潜行显示标识码
+	e1:SetProperty(EFFECT_FLAG_SINGLE_RANGE + EFFECT_FLAG_CLIENT_HINT)
+	e1:SetRange(GALAXY_LOCATION_UNIT_ZONE)
+	e1:SetReset(RESET_EVENT + RESETS_STANDARD)
+	c:RegisterEffect(e1)
+	return false
+end
+
+--移除潜行显示
+function Galaxy.RemoveStealthDisplay(c)
+	local stealth_display = c:IsHasEffect(EFFECT_STEALTH_HINT)
+	if stealth_display then
+		stealth_display:Reset()
+	end
+end
+
 --立刻增减生命力
 function Duel.AddHp(g_c, hp, reason)
 	local typ = aux.GetValueType(g_c)
@@ -2414,6 +2551,31 @@ function Duel.AddHp(g_c, hp, reason)
 		c:RegisterFlagEffect(flag, 0, EFFECT_FLAG_CANNOT_DISABLE, 1, hp)
 	end
 end
+
+---Galaxy HP事件触发函数（简化统一处理）
+---@param c Card 怪兽卡
+---@param hp_change number HP变化量（正数为恢复，负数为伤害）
+---@param is_effect_change boolean 是否为EFFECT_UPDATE_HP变化
+---@param reason integer 原因（REASON_BATTLE 或 REASON_EFFECT）
+---@param effect_player integer 效果玩家
+function Galaxy.RaiseHpEvent(c, hp_change, is_effect_change, reason, effect_player)
+	if not c or not c:IsLocation(LOCATION_MZONE) or hp_change == 0 then return end
+
+	-- 确定事件代码
+	local event_code
+	if is_effect_change then
+		event_code = GALAXY_EVENT_HP_EFFECT_CHANGE
+	elseif hp_change > 0 then
+		event_code = GALAXY_EVENT_HP_RECOVER
+	else
+		event_code = GALAXY_EVENT_HP_DAMAGE
+	end
+
+	-- 立即触发事件
+	local group = Group.FromCards(c)
+	Duel.RaiseEvent(group, event_code, nil, reason or REASON_EFFECT, effect_player or 0, effect_player or 0, math.abs(hp_change))
+end
+
 --[[
 --==============================================
 -- 暂时无用
