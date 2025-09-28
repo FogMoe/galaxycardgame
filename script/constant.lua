@@ -664,6 +664,14 @@ EFFECT_SHIELD = 502 -- 护盾
 EFFECT_SHIELD_HINT = 503 -- 护盾提示
 EFFECT_FREE_DEPLOY = 504 -- 可以免费部署
 EFFECT_UPDATE_HP = 505 --持续影响的增减生命力
+EFFECT_LETHAL = 506 --致命：战斗后若目标无护盾则直接击杀
+EFFECT_STEALTH = 507 --潜行：不能成为攻击和效果的对象，攻击后移除
+EFFECT_STEALTH_HINT = 508 --潜行提示
+
+--Galaxy HP事件系统（使用EVENT_CUSTOM机制，使用Galaxy专用范围避免冲突）
+GALAXY_EVENT_HP_DAMAGE = EVENT_CUSTOM + 99000001   -- 怪兽受到立即伤害事件（AddHp负值）
+GALAXY_EVENT_HP_RECOVER = EVENT_CUSTOM + 99000002  -- 怪兽立即恢复生命值事件（AddHp正值）
+GALAXY_EVENT_HP_EFFECT_CHANGE = EVENT_CUSTOM + 99000003   -- 怪兽HP效果变化事件（EFFECT_UPDATE_HP应用/移除）
 
 --下面是诱发效果的诱发事件、时点 （如果是TYPE_SINGLE则自己发生以下事件后触发，如果TYPE_FIELD则场上任何卡发生以下事件都触发）
 EVENT_STARTUP			  =1000   --N/A
