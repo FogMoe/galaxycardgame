@@ -85,7 +85,7 @@ function s.spop(e,tp,eg,ep,ev,re,r,rp)
 			e1:SetReset(RESET_EVENT+RESETS_STANDARD)
 			token:RegisterEffect(e1,true)
 			local e2=e1:Clone()
-			e2:SetCode(EFFECT_UPDATE_DEFENSE)
+			e2:SetCode(EFFECT_UPDATE_HP)
 			token:RegisterEffect(e2,true)
 		end
 	end

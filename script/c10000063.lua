@@ -23,7 +23,7 @@ function s.initial(c)
 	-- 永续效果：补给5以上的单位获得+4生命值
 	local e3=Effect.CreateEffect(c)
 	e3:SetType(EFFECT_TYPE_FIELD)
-	e3:SetCode(EFFECT_UPDATE_DEFENSE)
+	e3:SetCode(EFFECT_UPDATE_HP)
 	e3:SetRange(LOCATION_FZONE)
 	e3:SetTargetRange(LOCATION_MZONE,LOCATION_MZONE)
 	e3:SetTarget(s.deftg)

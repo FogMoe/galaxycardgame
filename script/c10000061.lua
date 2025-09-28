@@ -181,7 +181,7 @@ function s.damop(e,tp,eg,ep,ev,re,r,rp)
 			-- 减少生命值，系统会自动处理生命值为0的摧毁
 			local e1=Effect.CreateEffect(c)
 			e1:SetType(EFFECT_TYPE_SINGLE)
-			e1:SetCode(EFFECT_UPDATE_DEFENSE)
+			e1:SetCode(EFFECT_UPDATE_HP)
 			e1:SetValue(-damage)
 			e1:SetReset(RESET_EVENT+RESETS_STANDARD)
 			tc:RegisterEffect(e1)

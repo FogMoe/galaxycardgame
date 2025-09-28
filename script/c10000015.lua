@@ -18,6 +18,6 @@ function s.initial(c)
 	c:RegisterEffect(e2)
 	--Def
 	local e3=e2:Clone()
-	e3:SetCode(EFFECT_UPDATE_DEFENSE)
+	e3:SetCode(EFFECT_UPDATE_HP)
 	c:RegisterEffect(e3)
 end
