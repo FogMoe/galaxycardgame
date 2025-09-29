@@ -19,11 +19,16 @@ function s.cost(e,tp,eg,ep,ev,re,r,rp,chk)
 	Duel.PaySupplyCost(tp,3)
 end
 
+--不能是已经被无效的
+function s.check_disable(c)
+	return not c:IsDisabled() and c:IsFaceup()
+end
+
 function s.target(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
 	if chkc then return chkc:IsLocation(GALAXY_LOCATION_UNIT_ZONE) and chkc:IsControler(1-tp) and chkc:IsFaceup() end
-	if chk==0 then return Duel.IsExistingTarget(Card.IsFaceup,tp,0,GALAXY_LOCATION_UNIT_ZONE,1,nil) end
+	if chk==0 then return Duel.IsExistingTarget(s.check_disable,tp,0,GALAXY_LOCATION_UNIT_ZONE,1,nil) end
 	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_FACEUP)
-	local g=Duel.SelectTarget(tp,Card.IsFaceup,tp,0,GALAXY_LOCATION_UNIT_ZONE,1,1,nil)
+	local g=Duel.SelectTarget(tp,s.check_disable,tp,0,GALAXY_LOCATION_UNIT_ZONE,1,1,nil)
 	Duel.SetOperationInfo(0,CATEGORY_DISABLE,g,1,0,0)
 end
 
