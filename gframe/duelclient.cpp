@@ -1935,6 +1935,15 @@ bool DuelClient::ClientAnalyze(unsigned char* msg, int len) {
 			ss = BufferIO::Read<uint8_t>(pbuf);
 			desc = BufferIO::Read<int32_t>(pbuf);
 			pcard = mainGame->dField.GetCard(c, l, s, ss);
+			if(!pcard) {
+				pcard = new ClientCard();
+				mainGame->dField.limbo_temp.push_back(pcard);
+				panelmode = true;
+			}
+			if(!pcard)
+				continue;
+			if(code != 0 && pcard->code != code)
+				pcard->SetCode(code);
 			mainGame->dField.activatable_cards.push_back(pcard);
 			mainGame->dField.activatable_descs.push_back(std::make_pair(desc, flag));
 			pcard->is_selected = false;
