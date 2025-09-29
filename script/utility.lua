@@ -2082,7 +2082,7 @@ function Galaxy.AddShieldDisplay(e,tp,eg,ep,ev,re,r,rp)
 	e1:SetCode(EFFECT_SHIELD_HINT) --护盾显示标识码
 	e1:SetProperty(EFFECT_FLAG_SINGLE_RANGE + EFFECT_FLAG_CLIENT_HINT)
 	e1:SetRange(GALAXY_LOCATION_UNIT_ZONE)
-	e1:SetReset(RESET_EVENT + RESETS_STANDARD)
+	e1:SetReset(RESET_EVENT + RESETS_STANDARD + RESET_DISABLE)
 	c:RegisterEffect(e1)
 	return false
 end
@@ -2400,13 +2400,18 @@ function Galaxy.ChangeBattleDamage(e,re,dam,r,rp,rc)
 	return dam
 end
 
---优先选择有保护的单位攻击
+--优先选择有保护且没有隐身的单位攻击
 function Galaxy.ProtectAttackLimit(e,c)
 	if c:IsHasEffect(EFFECT_PROTECT) then
 		return false
 	end
 	local tp = c:GetControler()
-	return Duel.IsExistingMatchingCard(Card.IsHasEffect,tp,LOCATION_MZONE,0,1,nil,EFFECT_PROTECT)
+	return Duel.IsExistingMatchingCard(Galaxy.ProtectAttackFilter,tp,LOCATION_MZONE,0,1,nil)
+end
+
+--filter有保护且没有隐身的单位攻击
+function Galaxy.ProtectAttackFilter(c)
+	return c:IsHasEffect(EFFECT_PROTECT) and not c:IsHasEffect(EFFECT_STEALTH)
 end
 
 --潜行单位不能成为攻击目标
@@ -2538,7 +2543,7 @@ function Galaxy.AddStealthDisplay(e,tp,eg,ep,ev,re,r,rp)
 	e1:SetCode(EFFECT_STEALTH_HINT) --潜行显示标识码
 	e1:SetProperty(EFFECT_FLAG_SINGLE_RANGE + EFFECT_FLAG_CLIENT_HINT)
 	e1:SetRange(GALAXY_LOCATION_UNIT_ZONE)
-	e1:SetReset(RESET_EVENT + RESETS_STANDARD)
+	e1:SetReset(RESET_EVENT + RESETS_STANDARD + RESET_DISABLE)
 	c:RegisterEffect(e1)
 	return false
 end
