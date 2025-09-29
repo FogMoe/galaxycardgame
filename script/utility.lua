@@ -2278,10 +2278,63 @@ function Galaxy.PlayerRule(c)
 	--先攻玩家的第一次抽卡后给后攻玩家手牌中创建 一次性能量电池(99999999)
 	local e5 = Effect.CreateEffect(c)
 	e5:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
-	e5:SetCode(EVENT_DRAW)
+	e5:SetCode(EVENT_PHASE_START + PHASE_DRAW)
 	e5:SetCondition(Galaxy.FirstTurnTokenCondition)
 	e5:SetOperation(Galaxy.FirstTurnTokenOperation)
 	Duel.RegisterEffect(e5, 0)
+	--检测到双方卡组里如果有10000101则将它从双方卡组中分别特殊召唤出来
+	local e6 = Effect.CreateEffect(c)
+	e6:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
+	e6:SetCode(EVENT_PREDRAW)
+	e6:SetCondition(Galaxy.CheckDeckForStart)
+	e6:SetOperation(Galaxy.SummonForStart)
+	Duel.RegisterEffect(e6, 0)
+end
+
+-- 检查双方卡组中是否有c10000101
+function Galaxy.CheckDeckForStart(e,tp,eg,ep,ev,re,r,rp)
+	return Duel.GetTurnCount()==1 and
+		   (Duel.IsExistingMatchingCard(Card.IsCode,0,LOCATION_EXTRA,0,1,nil,10000101) or
+		    Duel.IsExistingMatchingCard(Card.IsCode,1,LOCATION_EXTRA,0,1,nil,10000101))
+end
+
+-- 从双方卡组中特殊召唤c10000101
+function Galaxy.SummonForStart(e,tp,eg,ep,ev,re,r,rp)
+	-- 检查并召唤玩家0的
+	local g0 = Duel.GetMatchingGroup(Card.IsCode,0,LOCATION_EXTRA,0,nil,10000101)
+	if g0:GetCount()>0 and Duel.GetLocationCount(0,LOCATION_MZONE)>0 then
+		local tc = g0:GetFirst()
+		Duel.ConfirmCards(0,tc)
+		Duel.Hint(HINT_CARD,0,tc:GetCode())
+		Duel.SpecialSummon(tc,0,0,0,false,false,POS_FACEUP_ATTACK)
+	end
+	-- 检查并召唤玩家1的
+	local g1 = Duel.GetMatchingGroup(Card.IsCode,1,LOCATION_EXTRA,0,nil,10000101)
+	if g1:GetCount()>0 and Duel.GetLocationCount(1,LOCATION_MZONE)>0 then
+		local tc = g1:GetFirst()
+		Duel.ConfirmCards(1,tc)
+		Duel.Hint(HINT_CARD,1,tc:GetCode())
+		Duel.SpecialSummon(tc,0,1,1,false,false,POS_FACEUP_ATTACK)
+	end
+	--如果有任意玩家携带了c10000101则双方玩家在本局中抽牌阶段额外抽1张卡，只能生效1个。
+	if (g0:GetCount()>0 or g1:GetCount()>0) then
+		-- 注册全局持续被动效果：双方玩家抽卡阶段额外抽1张卡
+		local e_draw = Effect.CreateEffect(e:GetHandler())
+		e_draw:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
+		e_draw:SetCountLimit(1)
+		e_draw:SetCode(EVENT_DRAW)
+		e_draw:SetOperation(function(e,tp,eg,ep,ev,re,r,rp)
+			local turn_player = Duel.GetTurnPlayer()
+			-- 当前回合玩家额外抽1张卡
+			if Duel.IsPlayerCanDraw(turn_player,1) then
+				Duel.Draw(turn_player,1,REASON_EFFECT)
+			end
+		end)
+		Duel.RegisterEffect(e_draw, 0)
+	end
+
+	-- 重置效果，避免重复触发
+	e:Reset()
 end
 
 function Galaxy.FirstTurnTokenCondition(e,tp,eg,ep,ev,re,r,rp)
