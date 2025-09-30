@@ -57,7 +57,27 @@ function s.spop(e,tp,eg,ep,ev,re,r,rp)
 
 	for i=1,3 do
 		local token=Duel.CreateToken(tp,10000041)
-		Duel.SpecialSummonStep(token,0,tp,tp,false,false,POS_FACEUP_ATTACK)
+		if Duel.SpecialSummonStep(token,0,tp,tp,false,false,POS_FACEUP_ATTACK) then
+			-- 下次自己的战备阶段破坏
+			local e1=Effect.CreateEffect(e:GetHandler())
+			e1:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_TRIGGER_F)
+			e1:SetCode(EVENT_PHASE+GALAXY_PHASE_PREPARATION)
+			e1:SetRange(GALAXY_LOCATION_UNIT_ZONE)
+			e1:SetCountLimit(1)
+			e1:SetCondition(function(e,tp,eg,ep,ev,re,r,rp) return Duel.GetTurnPlayer()==tp end)
+			e1:SetOperation(function(e,tp,eg,ep,ev,re,r,rp) Duel.Destroy(e:GetHandler(),REASON_EFFECT) end)
+			e1:SetReset(RESET_EVENT+RESETS_STANDARD+RESET_DISABLE+RESET_PHASE+PHASE_STANDBY)
+			token:RegisterEffect(e1,true)
+
+			-- 提示将于战备阶段破坏
+			local hint=Effect.CreateEffect(e:GetHandler())
+			hint:SetDescription(aux.Stringid(id,1))
+			hint:SetType(EFFECT_TYPE_SINGLE)
+			hint:SetProperty(EFFECT_FLAG_SINGLE_RANGE+EFFECT_FLAG_CLIENT_HINT)
+			hint:SetRange(GALAXY_LOCATION_UNIT_ZONE)
+			hint:SetReset(RESET_EVENT+RESETS_STANDARD+RESET_DISABLE)
+			token:RegisterEffect(hint,true)
+		end
 	end
 	Duel.SpecialSummonComplete()
 end
