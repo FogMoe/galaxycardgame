@@ -1,5 +1,5 @@
 --深渊孵化
---从特殊卡组部署1个节肢类大型舰队，消耗其需求的补给数量，如补给不足以消耗，则将那个单位效果无效变为0/1，下次自己回合的补给阶段时送往游戏外。
+--从特殊卡组部署1个节肢类软体类大型舰队，消耗其需求的补给数量，如补给不足以消耗，则将那个单位效果无效变为0/1，下次自己回合的补给阶段时送往游戏外。
 local s, id = Import()
 function s.initial(c)
 	local e1=Effect.CreateEffect(c)
@@ -11,7 +11,7 @@ function s.initial(c)
 	c:RegisterEffect(e1)
 end
 function s.filter(c,e,tp)
-	return c:IsGalaxyCategory(GALAXY_CATEGORY_ARTHROPOD) and c:IsType(GALAXY_TYPE_UNIT)
+	return (c:IsGalaxyCategory(GALAXY_CATEGORY_ARTHROPOD) or c:IsGalaxyCategory(GALAXY_CATEGORY_MOLLUSK)) and c:IsType(GALAXY_TYPE_UNIT)
 		and c:IsType(TYPE_FUSION) and c:IsCanBeSpecialSummoned(e,0,tp,false,false)
 		and Duel.GetLocationCountFromEx(tp,tp,nil,c)>0
 end
