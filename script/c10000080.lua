@@ -13,11 +13,12 @@ function s.initial(c)
 	e2:SetCode(EFFECT_FREE_DEPLOY)
 	e2:SetRange(LOCATION_FZONE)
 	e2:SetTargetRange(LOCATION_HAND,LOCATION_HAND)
+	e2:SetCountLimit(1,id)
 	e2:SetTarget(s.freetg)
 	c:RegisterEffect(e2)
 end
 
 --免费部署目标（攻击力等于生命值的军团单位）
 function s.freetg(e,c)
-	return c:GetAttack()==c:GetHp() and c:IsGalaxyProperty(GALAXY_PROPERTY_LEGION)
+	return c:GetAttack()==c:GetHp() and c:IsGalaxyProperty(GALAXY_PROPERTY_LEGION) and c:GetSupplyCost()<=3
 end
