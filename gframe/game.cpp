@@ -1104,10 +1104,12 @@ void Game::MainLoop() {
 	wchar_t cap[256];
 	camera = smgr->addCameraSceneNode(0);
 	irr::core::matrix4 mProjection;
-	BuildProjectionMatrix(mProjection, -0.90f, 0.45f, -0.42f, 0.42f, 1.0f, 100.0f);
+	// 垂直俯视：继续放大场地，投影范围再缩小
+	BuildProjectionMatrix(mProjection, -1.2f, 0.6f, -0.8f, 0.8f, 1.0f, 100.0f);
 	camera->setProjectionMatrix(mProjection);
 
-	mProjection.buildCameraLookAtMatrixLH(irr::core::vector3df(4.2f, 8.0f, 7.8f), irr::core::vector3df(4.2f, 0, 0), irr::core::vector3df(0, 0, 1));
+	// 摄像机再降低到6.0，场地填满更多屏幕，上方向(0, -1, 0)让我方在屏幕下方
+	mProjection.buildCameraLookAtMatrixLH(irr::core::vector3df(4.2f, 0.0f, 6.0f), irr::core::vector3df(4.2f, 0, 0), irr::core::vector3df(0, -1, 0));
 	camera->setViewMatrixAffector(mProjection);
 	smgr->setAmbientLight(irr::video::SColorf(1.0f, 1.0f, 1.0f));
 	float atkframe = 0.1f;

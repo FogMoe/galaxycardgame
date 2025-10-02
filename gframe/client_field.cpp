@@ -912,47 +912,47 @@ void ClientField::GetCardLocation(ClientCard* pcard, irr::core::vector3df* t, ir
 	case LOCATION_HAND: {
 		int count = hand[controler].size();
 		if (controler == 0) {
+			// 我方手牌
 			if (count <= 6)
 				t->X = (5.5f - 0.8f * count) / 2 + 1.55f + sequence * 0.8f;
 			else
 				t->X = 1.9f + sequence * 4.0f / (count - 1);
+			// Y坐标：hover时向内移动（Y减小）
 			if (pcard->is_hovered) {
-				t->Y = 3.84f;
-				t->Z = 0.656f + 0.001f * sequence;
+				t->Y = 4.1f;  // hover向内
+				t->Z = 0.12f + 0.001f * sequence;
 			} else {
-				t->Y = 4.0f;
-				t->Z = 0.5f + 0.001f * sequence;
+				t->Y = 4.2f;
+				t->Z = 0.08f + 0.001f * sequence;
 			}
+			// 垂直俯视：卡片平放，无倾斜
 			if(pcard->code) {
-				r->X = -0.798056f;
+				r->X = 0.0f;  // 移除倾斜
 				r->Y = 0.0f;
 				r->Z = 0.0f;
 			} else {
-				r->X = 0.798056f;
-				r->Y = 3.1415926f;
+				r->X = 0.0f;
+				r->Y = 3.1415926f;  // 背面
 				r->Z = 0;
 			}
 		} else {
+			// 对方手牌
 			if (count <= 6)
 				t->X = 6.25f - (5.5f - 0.8f * count) / 2 - sequence * 0.8f;
 			else
 				t->X = 5.9f - sequence * 4.0f / (count - 1);
+			// 对方hover：向内移动（绝对值减小）
 			if (pcard->is_hovered) {
-				t->Y = -3.56f;
-				t->Z = 0.656f - 0.001f * sequence;
+				t->Y = -4.1f;  // hover向内
+				t->Z = 0.12f + 0.001f * sequence;
 			} else {
-				t->Y = -3.4f;
-				t->Z = 0.5f - 0.001f * sequence;
+				t->Y = -4.2f;
+				t->Z = 0.08f + 0.001f * sequence;
 			}
-			if (pcard->code == 0) {
-				r->X = 0.798056f;
-				r->Y = 3.1415926f;
-				r->Z = 0;
-			} else {
-				r->X = -0.798056f;
-				r->Y = 0;
-				r->Z = 0;
-			}
+			// 对方手牌：平放+旋转180度朝向对方
+			r->X = 0.0f;  // 平放
+			r->Y = 3.1415926f;  // 背面
+			r->Z = 3.1415926f;  // 旋转180度
 		}
 		break;
 	}

@@ -2195,12 +2195,13 @@ void ClientField::GetHoverField(int x, int y) {
 				hovered_sequence = hc - 1 - (x - ofRect.UpperLeftCorner.X) * (hc - 1) / ((cardSize + cardSpace) * 5);
 		}
 	} else {
-		double screenx = x / 1024.0 * 1.35 - 0.90;
-		double screeny = y / 640.0 * 0.84 - 0.42;
-		double angle = 0.798056 - atan(screeny);	//0.798056 = arctan(8.0/7.8)
-		double vlen = sqrt(1.0 + screeny * screeny);
-		double boardx = 4.2 + 7.8 * screenx / vlen / cos(angle);
-		double boardy = 8.0 - 7.8 * tan(angle);
+		// 垂直俯视：简单线性映射 + 精确校准
+		// 投影参数：left=-1.2, right=0.6, bottom=-0.8, top=0.8
+		double screenx = x / 1024.0 * 1.8 - 1.2;
+		double screeny = y / 640.0 * 1.6 - 0.8;
+		// 摄像机上方向为(0, -1, 0)，Y轴反转，添加精确校准系数
+		double boardx = 4.2 + screenx * 1.08;  // X方向精确校准
+		double boardy = 0.0 - screeny * 1.02;   // Y方向微调
 		hovered_location = 0;
 		if(boardx >= matManager.vFieldExtra[0][0].Pos.X && boardx <= matManager.vFieldExtra[0][1].Pos.X) {
 			if(boardy >= matManager.vFieldExtra[0][0].Pos.Y && boardy <= matManager.vFieldExtra[0][2].Pos.Y) {
