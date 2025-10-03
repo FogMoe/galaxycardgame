@@ -1,5 +1,5 @@
 --单位复制器
---当己方单位特殊召唤成功时，复制一张相同的单位到场上
+--当己方非大型单位特殊召唤成功时，复制一张相同的单位到场上
 --复制体在战斗后会被破坏
 local s,id = Import()
 
@@ -19,9 +19,9 @@ function s.initial(c)
     c:RegisterEffect(e1)
 end
 
--- 筛选己方特殊召唤的单位（排除复制器自己）
+-- 筛选己方特殊召唤的单位（排除复制器自己和大型单位）
 function s.filter(c,tp,exc)
-    return c:IsFaceup() and c:IsSummonPlayer(tp)
+    return c:IsFaceup() and c:IsSummonPlayer(tp) and c:IsGalaxyProperty(GALAXY_PROPERTY_LEGION)
         and c:IsLocation(GALAXY_LOCATION_UNIT_ZONE)
         and c~=exc
 end
@@ -86,13 +86,18 @@ function s.spop(e,tp,eg,ep,ev,re,r,rp)
 
         Duel.SpecialSummonComplete()
 
-        -- 复制器受到等同于己方场上单位数量的伤害
+        -- 复制器受到等同于己方场上非大型单位数量的伤害
         local c=e:GetHandler()
         if c:IsRelateToEffect(e) and c:IsFaceup() then
-            local ct=Duel.GetMatchingGroupCount(Card.IsFaceup,tp,GALAXY_LOCATION_UNIT_ZONE,0,nil)
+            local ct=Duel.GetMatchingGroupCount(s.damhpfilter,tp,GALAXY_LOCATION_UNIT_ZONE,0,nil)
             if ct>0 then
                 Duel.AddHp(c,-ct,REASON_EFFECT)
             end
         end
     end
+end
+
+function s.damhpfilter(c)
+    return c:IsFaceup() and c:IsGalaxyProperty(GALAXY_PROPERTY_LEGION)
+        and c:IsLocation(GALAXY_LOCATION_UNIT_ZONE)
 end
