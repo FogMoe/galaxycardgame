@@ -46,16 +46,17 @@ function s.activate(e,tp,eg,ep,ev,re,r,rp)
 			while tc do
 				if Duel.SpecialSummonStep(tc,0,tp,tp,false,false,POS_FACEUP_ATTACK) then
 					summoned_monsters:AddCard(tc)
-					local e1=Effect.CreateEffect(e:GetHandler())
-					e1:SetType(EFFECT_TYPE_SINGLE)
-					e1:SetCode(EFFECT_SET_DEFENSE)
-					e1:SetValue(1)
-					e1:SetReset(RESET_EVENT+RESETS_STANDARD)
-					tc:RegisterEffect(e1)
 				end
 				tc=g:GetNext()
 			end
-			Duel.SpecialSummonComplete()	
+			Duel.SpecialSummonComplete()
+
+			-- 召唤完成后，将所有召唤的单位HP设置为1（不触发HP事件）
+			tc=summoned_monsters:GetFirst()
+			while tc do
+				Duel.SetHp(tc, 1)
+				tc=summoned_monsters:GetNext()
+			end	
 		else
 			--补给不足，取消部署
 			Duel.ConfirmCards(1-tp,g)

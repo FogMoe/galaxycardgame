@@ -2637,6 +2637,59 @@ function Duel.AddHp(g_c, hp, reason)
 	end
 end
 
+--直接设置生命力（不触发HP事件）
+---@param g_c Card|Group 要设置HP的卡片或卡片组
+---@param hp number 要设置的HP值
+function Duel.SetHp(g_c, hp)
+	local typ = aux.GetValueType(g_c)
+	if typ == "Card" then
+		g_c = Group.FromCards(g_c)
+	elseif typ ~= "Group" then
+		error("parameter 1 should be Card or Group", 2)
+	end
+	if aux.GetValueType(hp) ~= "number" then
+		error("parameter 2 should be number", 2)
+	end
+	if hp < 0 then
+		error("parameter 2 should be >= 0", 2)
+	end
+
+	for c in aux.Next(g_c) do
+		if not c:IsLocation(LOCATION_MZONE) then
+			error("card must be in monster zone", 2)
+		end
+
+		-- 查找HP系统的EVENT_ADJUST效果
+		local effects = {c:IsHasEffect(EVENT_ADJUST)}
+		local hp_system_found = false
+
+		for _, eff in ipairs(effects) do
+			if eff:GetOperation() == Galaxy.CalculateHp then
+				-- 获取最大HP信息
+				local hp_max_ori, hp_max_now, last_effect_total = eff:GetLabel()
+
+				-- 边界检查：HP不能超过当前最大HP
+				local new_hp = hp
+				if new_hp > hp_max_now then
+					new_hp = hp_max_now
+				end
+
+				-- 直接修改EFFECT_SET_DEFENSE效果的值（当前HP）
+				local hp_effect = eff:GetLabelObject()
+				if hp_effect then
+					hp_effect:SetValue(new_hp)
+					hp_system_found = true
+				end
+				break
+			end
+		end
+
+		if not hp_system_found then
+			error("HP system not initialized for this card", 2)
+		end
+	end
+end
+
 ---Galaxy HP事件触发函数（简化统一处理）
 ---@param c Card 怪兽卡
 ---@param hp_change number HP变化量（正数为恢复，负数为伤害）

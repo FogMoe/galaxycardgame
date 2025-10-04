@@ -33,9 +33,10 @@ function s.initial(c)
 	e3:SetValue(1)
 	c:RegisterEffect(e3)
 
+	-- 使用 EFFECT_UPDATE_HP 动态调整HP为4
 	local e4=e3:Clone()
-	e4:SetCode(EFFECT_SET_DEFENSE)
-	e4:SetValue(4)
+	e4:SetCode(EFFECT_UPDATE_HP)
+	e4:SetValue(s.hpval)
 	c:RegisterEffect(e4)
 end
 
@@ -67,4 +68,9 @@ end
 -- 极光族大型单位目标
 function s.atktg(e,c)
 	return c:IsRace(GALAXY_CATEGORY_AURORA) and c:IsType(TYPE_FUSION)
+end
+
+-- HP修改值：将最大HP调整为4
+function s.hpval(e,c)
+	return 4 - c:GetBaseHp()
 end
