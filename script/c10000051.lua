@@ -44,10 +44,12 @@ function s.activate(e,tp,eg,ep,ev,re,r,rp)
 			e1:SetValue(0)
 			e1:SetReset(RESET_EVENT+RESETS_STANDARD)
 			tc:RegisterEffect(e1)
+
+			-- 使用 EFFECT_UPDATE_HP 将最大HP降为1（当前HP会自动钳制）
 			local e2=Effect.CreateEffect(e:GetHandler())
 			e2:SetType(EFFECT_TYPE_SINGLE)
-			e2:SetCode(EFFECT_SET_DEFENSE)
-			e2:SetValue(1)
+			e2:SetCode(EFFECT_UPDATE_HP)
+			e2:SetValue(1 - tc:GetBaseHp())
 			e2:SetReset(RESET_EVENT+RESETS_STANDARD)
 			tc:RegisterEffect(e2)
 
