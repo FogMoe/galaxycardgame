@@ -655,6 +655,7 @@ EFFECT_RITUAL_LEVEL_EX  =374  --支持使用没有等级的怪兽作为仪式素
 EFFECT_DOUBLE_XMATERIAL   =375   --召唤需3只以上作素材的超量怪兽时可以作为2只数量的素材
 EFFECT_FLAG_EFFECT	=0x20000000 --标记类效果，即RegisterFlagEffect()创建的效果
 
+FLAG_SET_HP_PENDING = 497 --待应用的直接生命力设置
 FLAG_ADD_HP_IMMEDIATELY_EFFECT = 498 --效果立刻增减生命力
 FLAG_ADD_HP_IMMEDIATELY_BATTLE = 499 --战斗立刻增减生命力
 

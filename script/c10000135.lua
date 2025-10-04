@@ -70,14 +70,14 @@ function s.spop(e,tp,eg,ep,ev,re,r,rp)
 		Duel.SetHp(c, 1)
 
 		-- 注册已复活标记，防止再次复活
-		c:RegisterFlagEffect(id,RESET_EVENT+RESETS_STANDARD,0,1)
+		c:RegisterFlagEffect(id,RESET_EVENT+RESETS_STANDARD-RESET_TOFIELD,0,1)
 
 		-- 添加客户端提示
 		local e2=Effect.CreateEffect(c)
 		e2:SetDescription(aux.Stringid(id,3))
 		e2:SetType(EFFECT_TYPE_SINGLE)
 		e2:SetProperty(EFFECT_FLAG_CLIENT_HINT)
-		e2:SetReset(RESET_EVENT+RESETS_STANDARD)
+		e2:SetReset(RESET_EVENT+RESETS_STANDARD-RESET_TOFIELD)
 		c:RegisterEffect(e2)
 	end
 end

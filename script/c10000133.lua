@@ -61,7 +61,7 @@ function s.spop(e,tp,eg,ep,ev,re,r,rp)
         -- 添加战斗后破坏效果
         local e1=Effect.CreateEffect(e:GetHandler())
         e1:SetType(EFFECT_TYPE_SINGLE+EFFECT_TYPE_CONTINUOUS)
-        e1:SetCode(EVENT_BATTLED)
+        e1:SetCode(EVENT_DAMAGE_STEP_END)
         e1:SetReset(RESET_EVENT+RESETS_STANDARD)
         e1:SetOperation(function(e,tp,eg,ep,ev,re,r,rp)
             Duel.Destroy(e:GetHandler(),REASON_EFFECT)
