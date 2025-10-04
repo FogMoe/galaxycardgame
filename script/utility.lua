@@ -2117,6 +2117,7 @@ function Galaxy.CalculateHp(e,tp,eg,ep,ev,re,r,rp)
 	local c = e:GetHandler()
 	local now_hp = c:GetHp()
 	local hp_max_ori, hp_max_now, last_effect_total = e:GetLabel() -- 获取：原始最大HP，当前最大HP，上次效果总和
+	local pending_hp = c:GetFlagEffectLabel(FLAG_SET_HP_PENDING)
 	local val = c:GetFlagEffectLabel(FLAG_ADD_HP_IMMEDIATELY_BATTLE)
 	if val then
 		now_hp = Galaxy.CalculateAddHpImmediately(c, val, now_hp, hp_max_now, REASON_BATTLE, 0)
@@ -2182,6 +2183,17 @@ function Galaxy.CalculateHp(e,tp,eg,ep,ev,re,r,rp)
 
 		-- 保存新的状态数据
 		e:SetLabel(hp_max_ori, hp_max_now, current_effect_total)
+	end
+
+	if pending_hp ~= nil then
+		local new_hp = math.floor(pending_hp)
+		if new_hp > hp_max_now then
+			new_hp = hp_max_now
+		elseif new_hp < 0 then
+			new_hp = 0
+		end
+		now_hp = new_hp
+		c:ResetFlagEffect(FLAG_SET_HP_PENDING)
 	end
 
 	-- 三重安全检查确保生命值系统的健壮性：
@@ -2365,10 +2377,10 @@ function Galaxy.BattleRule(c)
 	e1:SetTarget(Galaxy.SummonThisTurn)
 	e1:SetTargetRange(LOCATION_MZONE, LOCATION_MZONE)
 	Duel.RegisterEffect(e1, 0)
-	--伤害步骤结束时处理降低怪兽生命
+	--战斗结束时处理降低怪兽生命
 	local e2 = Effect.CreateEffect(c)
 	e2:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
-	e2:SetCode(EVENT_DAMAGE_STEP_END)
+	e2:SetCode(EVENT_BATTLED)
 	e2:SetProperty(property)
 	e2:SetCondition(Galaxy.ReduceHP)
 	Duel.RegisterEffect(e2, 0)
@@ -2659,33 +2671,30 @@ function Duel.SetHp(g_c, hp)
 			error("card must be in monster zone", 2)
 		end
 
-		-- 查找HP系统的EVENT_ADJUST效果
-		local effects = {c:IsHasEffect(EVENT_ADJUST)}
-		local hp_system_found = false
+		local desired_hp = math.floor(hp)
+		if desired_hp < 0 then desired_hp = 0 end
+		local max_hp = c.GetMaxHp and c:GetMaxHp() or desired_hp
+		if desired_hp > max_hp then desired_hp = max_hp end
 
+		local applied = false
+		local effects = {c:IsHasEffect(EVENT_ADJUST)}
 		for _, eff in ipairs(effects) do
 			if eff:GetOperation() == Galaxy.CalculateHp then
-				-- 获取最大HP信息
-				local hp_max_ori, hp_max_now, last_effect_total = eff:GetLabel()
-
-				-- 边界检查：HP不能超过当前最大HP
-				local new_hp = hp
-				if new_hp > hp_max_now then
-					new_hp = hp_max_now
-				end
-
-				-- 直接修改EFFECT_SET_DEFENSE效果的值（当前HP）
 				local hp_effect = eff:GetLabelObject()
 				if hp_effect then
-					hp_effect:SetValue(new_hp)
-					hp_system_found = true
+					c:ResetFlagEffect(FLAG_SET_HP_PENDING)
+					hp_effect:SetValue(desired_hp)
+					Duel.AdjustInstantly(c)
+					applied = true
 				end
 				break
 			end
 		end
 
-		if not hp_system_found then
-			error("HP system not initialized for this card", 2)
+		if not applied then
+			c:ResetFlagEffect(FLAG_SET_HP_PENDING)
+			c:RegisterFlagEffect(FLAG_SET_HP_PENDING, 0, EFFECT_FLAG_CANNOT_DISABLE, 1, desired_hp)
+			Duel.AdjustInstantly(c)
 		end
 	end
 end

@@ -16,17 +16,21 @@ function s.initial(c)
 	e2:SetCode(EFFECT_MUST_ATTACK)
 	e2:SetRange(LOCATION_MZONE)
 	e2:SetTargetRange(0,LOCATION_MZONE)
-	e2:SetProperty(EFFECT_FLAG_CLIENT_HINT)
-	e2:SetDescription(aux.Stringid(id,0))
+	e2:SetTarget(s.atktg)
 	c:RegisterEffect(e2)
 
 	-- 战斗伤害反弹效果：战斗时对方玩家也受到相同伤害
 	local e3=Effect.CreateEffect(c)
 	e3:SetType(EFFECT_TYPE_SINGLE+EFFECT_TYPE_TRIGGER_F)
-	e3:SetCode(EVENT_DAMAGE_STEP_END)
+	e3:SetCode(EVENT_BATTLE_CONFIRM)
 	e3:SetCondition(s.damcon)
 	e3:SetOperation(s.damop)
 	c:RegisterEffect(e3)
+end
+
+-- 强制攻击目标：只对场上正面表示的怪兽生效
+function s.atktg(e,c)
+	return c:IsFaceup()
 end
 
 -- 战斗伤害反弹条件：这张卡参与战斗且受到伤害
