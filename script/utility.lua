@@ -2117,7 +2117,6 @@ function Galaxy.CalculateHp(e,tp,eg,ep,ev,re,r,rp)
 	local c = e:GetHandler()
 	local now_hp = c:GetHp()
 	local hp_max_ori, hp_max_now, last_effect_total = e:GetLabel() -- 获取：原始最大HP，当前最大HP，上次效果总和
-	local pending_hp = c:GetFlagEffectLabel(FLAG_SET_HP_PENDING)
 	local val = c:GetFlagEffectLabel(FLAG_ADD_HP_IMMEDIATELY_BATTLE)
 	if val then
 		now_hp = Galaxy.CalculateAddHpImmediately(c, val, now_hp, hp_max_now, REASON_BATTLE, 0)
@@ -2185,14 +2184,16 @@ function Galaxy.CalculateHp(e,tp,eg,ep,ev,re,r,rp)
 		e:SetLabel(hp_max_ori, hp_max_now, current_effect_total)
 	end
 
+	local pending_hp = c:GetFlagEffectLabel(FLAG_SET_HP_PENDING)
 	if pending_hp ~= nil then
-		local new_hp = math.floor(pending_hp)
-		if new_hp > hp_max_now then
-			new_hp = hp_max_now
-		elseif new_hp < 0 then
-			new_hp = 0
+		local desired = pending_hp
+		if type(desired) ~= "number" then
+			desired = tonumber(desired) or 0
 		end
-		now_hp = new_hp
+		desired = math.floor(desired)
+		if desired < 0 then desired = 0 end
+		if desired > hp_max_now then desired = hp_max_now end
+		now_hp = desired
 		c:ResetFlagEffect(FLAG_SET_HP_PENDING)
 	end
 
@@ -2225,6 +2226,7 @@ end
 ---@param hp_max number 最大HP
 ---@param reason integer 原因（REASON_BATTLE 或 REASON_EFFECT）
 ---@param effect_player integer 效果玩家
+
 function Galaxy.CalculateAddHpImmediately(c, val, hp, hp_max, reason, effect_player)
 	local shield = c:IsHasEffect(EFFECT_SHIELD)
 	-- 护盾机制：只阻挡伤害（负值），不阻挡治疗（正值）
@@ -2673,29 +2675,29 @@ function Duel.SetHp(g_c, hp)
 
 		local desired_hp = math.floor(hp)
 		if desired_hp < 0 then desired_hp = 0 end
-		local max_hp = c.GetMaxHp and c:GetMaxHp() or desired_hp
-		if desired_hp > max_hp then desired_hp = max_hp end
 
-		local applied = false
+		local hp_system_found = false
 		local effects = {c:IsHasEffect(EVENT_ADJUST)}
 		for _, eff in ipairs(effects) do
 			if eff:GetOperation() == Galaxy.CalculateHp then
+				local hp_max_ori, hp_max_now = eff:GetLabel()
+				if type(hp_max_now) == "number" and desired_hp > hp_max_now then
+					desired_hp = hp_max_now
+				end
 				local hp_effect = eff:GetLabelObject()
 				if hp_effect then
-					c:ResetFlagEffect(FLAG_SET_HP_PENDING)
 					hp_effect:SetValue(desired_hp)
-					Duel.AdjustInstantly(c)
-					applied = true
 				end
+				hp_system_found = true
 				break
 			end
 		end
 
-		if not applied then
-			c:ResetFlagEffect(FLAG_SET_HP_PENDING)
+		c:ResetFlagEffect(FLAG_SET_HP_PENDING)
+		if not hp_system_found then
 			c:RegisterFlagEffect(FLAG_SET_HP_PENDING, 0, EFFECT_FLAG_CANNOT_DISABLE, 1, desired_hp)
-			Duel.AdjustInstantly(c)
 		end
+		Duel.AdjustInstantly(c)
 	end
 end
 
