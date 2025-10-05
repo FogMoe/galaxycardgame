@@ -1,6 +1,5 @@
 --虚空利维坦
 --在部署的回合就可以攻击。
---可以直接攻击。
 --当你部署其他节肢类单位时，获得+1/+1。
 local s, id = Import()
 function s.initial(c)
@@ -9,12 +8,6 @@ function s.initial(c)
 	e1:SetType(EFFECT_TYPE_SINGLE)
 	e1:SetCode(EFFECT_RUSH)
 	c:RegisterEffect(e1)
-
-	--直接攻击
-	local e2=Effect.CreateEffect(c)
-	e2:SetType(EFFECT_TYPE_SINGLE)
-	e2:SetCode(EFFECT_DIRECT_ATTACK)
-	c:RegisterEffect(e2)
 
 	--节肢类单位部署时获得+1/+1
 	local e3=Effect.CreateEffect(c)

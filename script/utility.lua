@@ -2049,6 +2049,14 @@ function Galaxy.UnitRule(c)
 	e6:SetCondition(Galaxy.StealthAttackLimit)
 	e6:SetValue(aux.imval1)
 	c:RegisterEffect(e6)
+	--允许直接攻击玩家（仅当对方场上没有保护单位时）
+	local e7 = Effect.CreateEffect(c)
+	e7:SetType(EFFECT_TYPE_SINGLE)
+	e7:SetProperty(property + EFFECT_FLAG_SINGLE_RANGE)
+	e7:SetRange(LOCATION_MZONE)
+	e7:SetCode(EFFECT_DIRECT_ATTACK)
+	e7:SetCondition(Galaxy.DirectAttackCondition)
+	c:RegisterEffect(e7)
 end
 
 --特殊召唤条件：检查场地和代价是否足够
@@ -2483,6 +2491,18 @@ end
 --filter有保护且没有隐身的单位攻击
 function Galaxy.ProtectAttackFilter(c)
 	return c:IsHasEffect(EFFECT_PROTECT) and not c:IsHasEffect(EFFECT_STEALTH)
+end
+
+--当对方场上没有保护单位时，允许直接攻击玩家
+function Galaxy.DirectAttackCondition(e)
+	local c = e:GetHandler()
+	local tp = c:GetControler()
+	-- 检查自身是否被禁止直接攻击
+	if c:IsHasEffect(EFFECT_CANNOT_DIRECT_ATTACK) then
+		return false
+	end
+	-- 检查对方场上是否不存在保护单位（或保护单位都有隐身）
+	return not Duel.IsExistingMatchingCard(Galaxy.ProtectAttackFilter,tp,0,LOCATION_MZONE,1,nil)
 end
 
 --潜行单位不能成为攻击目标
