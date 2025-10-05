@@ -1,5 +1,5 @@
 --种子巨兽
---部署时，部署2个临时的1/1的植物幼芽，使它们获得效果（可以直接攻击）。
+--部署时，部署2个临时的1/1的植物幼芽，使它们获得效果（不可以直接攻击）。
 --死亡时，抽1张卡，制造2张星核种子，加入卡组顶部。
 local s, id = Import()
 function s.initial(c)
@@ -45,14 +45,14 @@ function s.spop(e,tp,eg,ep,ev,re,r,rp)
 	for i=1,2 do
 		local token=Duel.CreateToken(tp,10000123)
 		if Duel.SpecialSummonStep(token,0,tp,tp,false,false,POS_FACEUP_ATTACK) then
-			--给token添加直接攻击能力
+			--给token添加不直接攻击能力
 			local e1=Effect.CreateEffect(c)
 			e1:SetType(EFFECT_TYPE_SINGLE)
-			e1:SetCode(EFFECT_DIRECT_ATTACK)
+			e1:SetCode(EFFECT_CANNOT_DIRECT_ATTACK)
 			e1:SetReset(RESET_EVENT+RESETS_STANDARD)
 			token:RegisterEffect(e1,true)
 
-			--客户端提示：可以直接攻击
+			--客户端提示：不可以直接攻击
 			local e2=Effect.CreateEffect(c)
 			e2:SetDescription(aux.Stringid(id,1))
 			e2:SetType(EFFECT_TYPE_SINGLE)

@@ -1,4 +1,4 @@
---：机械单位专用强化。发动消耗2补给，赋予直接攻击能力。
+--：机械单位专用强化。发动消耗2补给，赋予致命能力。
 local s,id=Import()
 
 function s.initial(c)
@@ -54,10 +54,10 @@ function s.activate(e,tp,eg,ep,ev,re,r,rp)
         hint:SetReset(RESET_EVENT+RESETS_STANDARD)
         tc:RegisterEffect(hint,true)
 
-        -- 直接攻击能力
+        -- 致命能力
         local e1=Effect.CreateEffect(c)
         e1:SetType(EFFECT_TYPE_SINGLE)
-        e1:SetCode(EFFECT_DIRECT_ATTACK)
+        e1:SetCode(EFFECT_LETHAL)
         e1:SetReset(RESET_EVENT+RESETS_STANDARD)
         tc:RegisterEffect(e1,true)
     else
