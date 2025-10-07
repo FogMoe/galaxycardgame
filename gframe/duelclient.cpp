@@ -13,8 +13,390 @@
 #endif
 #include <thread>
 #include <algorithm>
+#include <cctype>
+#include <vector>
+#include <string>
+#include <array>
+#include <map>
+#include <sstream>
+#include <random>
+#include <cstring>
+#include <utility>
+#include <cmath>
+#include "base64.h"
 
 namespace ygo {
+namespace {
+std::string WideToUTF8(const std::wstring& input) {
+	if(input.empty())
+		return {};
+	std::vector<char> buffer((input.size() + 1) * 4);
+	BufferIO::EncodeUTF8String(input.c_str(), buffer.data(), buffer.size());
+	return std::string(buffer.data());
+}
+std::wstring Utf8ToWide(const std::string& input) {
+	if(input.empty())
+		return {};
+	std::vector<wchar_t> buffer(input.size() + 1);
+	BufferIO::DecodeUTF8String(input.c_str(), buffer.data(), buffer.size());
+	return std::wstring(buffer.data());
+}
+void AppendUTF8(std::string& out, uint32_t codepoint) {
+	if(codepoint <= 0x7F) {
+		out.push_back(static_cast<char>(codepoint));
+	} else if(codepoint <= 0x7FF) {
+		out.push_back(static_cast<char>(0xC0 | ((codepoint >> 6) & 0x1F)));
+		out.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
+	} else if(codepoint <= 0xFFFF) {
+		out.push_back(static_cast<char>(0xE0 | ((codepoint >> 12) & 0x0F)));
+		out.push_back(static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F)));
+		out.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
+	} else if(codepoint <= 0x10FFFF) {
+		out.push_back(static_cast<char>(0xF0 | ((codepoint >> 18) & 0x07)));
+		out.push_back(static_cast<char>(0x80 | ((codepoint >> 12) & 0x3F)));
+		out.push_back(static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F)));
+		out.push_back(static_cast<char>(0x80 | (codepoint & 0x3F)));
+	}
+}
+bool IsHexChar(char ch) {
+	return (ch >= '0' && ch <= '9') ||
+		(ch >= 'a' && ch <= 'f') ||
+		(ch >= 'A' && ch <= 'F');
+}
+uint32_t HexValue(char ch) {
+	if(ch >= '0' && ch <= '9')
+		return static_cast<uint32_t>(ch - '0');
+	if(ch >= 'a' && ch <= 'f')
+		return static_cast<uint32_t>(ch - 'a' + 10);
+	return static_cast<uint32_t>(ch - 'A' + 10);
+}
+
+struct JsonValue {
+	enum class Type {
+		Null,
+		Bool,
+		Number,
+		String,
+		Array,
+		Object
+	};
+	Type type = Type::Null;
+	bool bool_value = false;
+	double number_value = 0.0;
+	std::string string_value;
+	std::vector<JsonValue> array_value;
+	std::map<std::string, JsonValue> object_value;
+
+	const JsonValue* Find(const std::string& key) const {
+		auto it = object_value.find(key);
+		return it != object_value.end() ? &it->second : nullptr;
+	}
+};
+
+class JsonParser {
+public:
+	explicit JsonParser(const std::string& json) : json_(json) {}
+
+	bool Parse(JsonValue& out) {
+		SkipWhitespace();
+		if(!ParseValue(out))
+			return false;
+		SkipWhitespace();
+		return pos_ == json_.size();
+	}
+
+private:
+	bool ParseValue(JsonValue& out) {
+		if(pos_ >= json_.size())
+			return false;
+		char ch = json_[pos_];
+		switch(ch) {
+		case '{':
+			return ParseObject(out);
+		case '[':
+			return ParseArray(out);
+		case '"': {
+			std::string str;
+			if(!ParseString(str))
+				return false;
+			out.type = JsonValue::Type::String;
+			out.string_value = std::move(str);
+			return true;
+		}
+		case 't':
+			return ParseLiteral("true", out, JsonValue::Type::Bool, true);
+		case 'f':
+			return ParseLiteral("false", out, JsonValue::Type::Bool, false);
+		case 'n':
+			return ParseLiteral("null", out, JsonValue::Type::Null, false);
+		default:
+			if(ch == '-' || (ch >= '0' && ch <= '9'))
+				return ParseNumber(out);
+			break;
+		}
+		return false;
+	}
+	bool ParseObject(JsonValue& out) {
+		if(!Consume('{'))
+			return false;
+		out.type = JsonValue::Type::Object;
+		out.object_value.clear();
+		SkipWhitespace();
+		if(Peek('}')) {
+			++pos_;
+			return true;
+		}
+		while(true) {
+			SkipWhitespace();
+			std::string key;
+			if(!ParseString(key))
+				return false;
+			SkipWhitespace();
+			if(!Consume(':'))
+				return false;
+			SkipWhitespace();
+			JsonValue value;
+			if(!ParseValue(value))
+				return false;
+			out.object_value.emplace(std::move(key), std::move(value));
+			SkipWhitespace();
+			if(Peek('}')) {
+				++pos_;
+				break;
+			}
+			if(!Consume(','))
+				return false;
+		}
+		return true;
+	}
+	bool ParseArray(JsonValue& out) {
+		if(!Consume('['))
+			return false;
+		out.type = JsonValue::Type::Array;
+		out.array_value.clear();
+		SkipWhitespace();
+		if(Peek(']')) {
+			++pos_;
+			return true;
+		}
+		while(true) {
+			JsonValue value;
+			SkipWhitespace();
+			if(!ParseValue(value))
+				return false;
+			out.array_value.push_back(std::move(value));
+			SkipWhitespace();
+			if(Peek(']')) {
+				++pos_;
+				break;
+			}
+			if(!Consume(','))
+				return false;
+		}
+		return true;
+	}
+	bool ParseString(std::string& out) {
+		if(!Consume('"'))
+			return false;
+		out.clear();
+		while(pos_ < json_.size()) {
+			char ch = json_[pos_++];
+			if(ch == '"')
+				return true;
+			if(static_cast<unsigned char>(ch) < 0x20)
+				return false;
+			if(ch == '\\') {
+				if(pos_ >= json_.size())
+					return false;
+				char esc = json_[pos_++];
+				switch(esc) {
+				case '"': out.push_back('"'); break;
+				case '\\': out.push_back('\\'); break;
+				case '/': out.push_back('/'); break;
+				case 'b': out.push_back('\b'); break;
+				case 'f': out.push_back('\f'); break;
+				case 'n': out.push_back('\n'); break;
+				case 'r': out.push_back('\r'); break;
+				case 't': out.push_back('\t'); break;
+				case 'u': {
+					if(pos_ + 4 > json_.size())
+						return false;
+					uint32_t codepoint = 0;
+					for(int i = 0; i < 4; ++i) {
+						char hex = json_[pos_++];
+						if(!IsHexChar(hex))
+							return false;
+						codepoint = (codepoint << 4) | HexValue(hex);
+					}
+					if(codepoint >= 0xD800 && codepoint <= 0xDBFF) {
+						if(pos_ + 6 > json_.size() || json_[pos_] != '\\' || json_[pos_ + 1] != 'u')
+							return false;
+						pos_ += 2;
+						uint32_t low = 0;
+						for(int i = 0; i < 4; ++i) {
+							char hex = json_[pos_++];
+							if(!IsHexChar(hex))
+								return false;
+							low = (low << 4) | HexValue(hex);
+						}
+						if(!(low >= 0xDC00 && low <= 0xDFFF))
+							return false;
+						codepoint = 0x10000 + ((codepoint - 0xD800) << 10) + (low - 0xDC00);
+					} else if(codepoint >= 0xDC00 && codepoint <= 0xDFFF) {
+						return false;
+					}
+					AppendUTF8(out, codepoint);
+					break;
+				}
+				default:
+					return false;
+				}
+			} else {
+				out.push_back(ch);
+			}
+		}
+		return false;
+	}
+	bool ParseNumber(JsonValue& out) {
+		size_t start = pos_;
+		if(json_[pos_] == '-')
+			++pos_;
+		if(pos_ >= json_.size())
+			return false;
+		if(json_[pos_] == '0') {
+			++pos_;
+		} else if(json_[pos_] >= '1' && json_[pos_] <= '9') {
+			while(pos_ < json_.size() && std::isdigit(static_cast<unsigned char>(json_[pos_])))
+				++pos_;
+		} else {
+			return false;
+		}
+		if(pos_ < json_.size() && json_[pos_] == '.') {
+			++pos_;
+			if(pos_ >= json_.size() || !std::isdigit(static_cast<unsigned char>(json_[pos_])))
+				return false;
+			while(pos_ < json_.size() && std::isdigit(static_cast<unsigned char>(json_[pos_])))
+				++pos_;
+		}
+		if(pos_ < json_.size() && (json_[pos_] == 'e' || json_[pos_] == 'E')) {
+			++pos_;
+			if(pos_ < json_.size() && (json_[pos_] == '+' || json_[pos_] == '-'))
+				++pos_;
+			if(pos_ >= json_.size() || !std::isdigit(static_cast<unsigned char>(json_[pos_])))
+				return false;
+			while(pos_ < json_.size() && std::isdigit(static_cast<unsigned char>(json_[pos_])))
+				++pos_;
+		}
+		try {
+			out.type = JsonValue::Type::Number;
+			out.number_value = std::stod(json_.substr(start, pos_ - start));
+		} catch(...) {
+			return false;
+		}
+		return true;
+	}
+	bool ParseLiteral(const char* literal, JsonValue& out, JsonValue::Type type, bool bool_value) {
+		const size_t len = std::strlen(literal);
+		if(json_.compare(pos_, len, literal) != 0)
+			return false;
+		pos_ += len;
+		out.type = type;
+		out.bool_value = bool_value;
+		return true;
+	}
+	void SkipWhitespace() {
+		while(pos_ < json_.size()) {
+			char ch = json_[pos_];
+			if(ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t')
+				++pos_;
+			else
+				break;
+		}
+	}
+	bool Consume(char expected) {
+		if(pos_ >= json_.size() || json_[pos_] != expected)
+			return false;
+		++pos_;
+		return true;
+	}
+	bool Peek(char expected) const {
+		return pos_ < json_.size() && json_[pos_] == expected;
+	}
+
+	const std::string& json_;
+	size_t pos_ = 0;
+};
+
+int64_t JsonGetInt(const JsonValue& obj, const std::string& key, int64_t default_value = 0) {
+	const JsonValue* val = obj.Find(key);
+	if(!val)
+		return default_value;
+	if(val->type == JsonValue::Type::Number)
+		return static_cast<int64_t>(val->number_value);
+	if(val->type == JsonValue::Type::Bool)
+		return val->bool_value ? 1 : 0;
+	if(val->type == JsonValue::Type::String) {
+		try {
+			return std::stoll(val->string_value);
+		} catch(...) {
+		}
+	}
+	return default_value;
+}
+double JsonGetNumber(const JsonValue& obj, const std::string& key, double default_value = 0.0) {
+	const JsonValue* val = obj.Find(key);
+	if(!val)
+		return default_value;
+	if(val->type == JsonValue::Type::Number)
+		return val->number_value;
+	if(val->type == JsonValue::Type::Bool)
+		return val->bool_value ? 1.0 : 0.0;
+	if(val->type == JsonValue::Type::String) {
+		try {
+			return std::stod(val->string_value);
+		} catch(...) {
+		}
+	}
+	return default_value;
+}
+bool JsonGetBool(const JsonValue& obj, const std::string& key, bool default_value = false) {
+	const JsonValue* val = obj.Find(key);
+	if(!val)
+		return default_value;
+	if(val->type == JsonValue::Type::Bool)
+		return val->bool_value;
+	if(val->type == JsonValue::Type::Number)
+		return val->number_value != 0.0;
+	if(val->type == JsonValue::Type::String)
+		return !val->string_value.empty();
+	return default_value;
+}
+std::string JsonGetString(const JsonValue& obj, const std::string& key, const std::string& default_value = std::string()) {
+	const JsonValue* val = obj.Find(key);
+	if(!val)
+		return default_value;
+	if(val->type == JsonValue::Type::String)
+		return val->string_value;
+	if(val->type == JsonValue::Type::Number) {
+		double num = val->number_value;
+		double rounded = std::floor(num);
+		if(std::fabs(num - rounded) < 1e-9)
+			return std::to_string(static_cast<long long>(rounded));
+		return std::to_string(num);
+	}
+	if(val->type == JsonValue::Type::Bool)
+		return val->bool_value ? "true" : "false";
+	return default_value;
+}
+const JsonValue* JsonGetObject(const JsonValue& obj, const std::string& key) {
+	const JsonValue* val = obj.Find(key);
+	return (val && val->type == JsonValue::Type::Object) ? val : nullptr;
+}
+const JsonValue* JsonGetArray(const JsonValue& obj, const std::string& key) {
+	const JsonValue* val = obj.Find(key);
+	return (val && val->type == JsonValue::Type::Array) ? val : nullptr;
+}
+}
 
 unsigned DuelClient::connect_state = 0;
 unsigned char DuelClient::response_buf[SIZE_RETURN_VALUE];
@@ -35,6 +417,8 @@ size_t DuelClient::last_successful_msg_length = 0;
 wchar_t DuelClient::event_string[256];
 std::mt19937 DuelClient::rnd;
 std::uniform_real_distribution<float> DuelClient::real_dist;
+std::atomic<int> DuelClient::pending_refresh_tasks{0};
+std::vector<std::wstring> DuelClient::host_passwords;
 
 bool DuelClient::is_refreshing = false;
 int DuelClient::match_kill = 0;
@@ -4380,17 +4764,56 @@ void DuelClient::BeginRefreshHost() {
 		return;
 	is_refreshing = true;
 	DuelClient::is_srvpro = false;
+	pending_refresh_tasks.store(0);
 	mainGame->btnLanRefresh->setEnabled(false);
 	mainGame->lstHostList->clear();
 	remotes.clear();
 	hosts.clear();
+	host_passwords.clear();
+	auto remote_sources = BuildRemoteServerSources();
+	if(!remote_sources.empty()) {
+		pending_refresh_tasks.fetch_add(1);
+		std::thread(FetchRemoteRoomsThread, std::move(remote_sources)).detach();
+	}
 	event_base* broadev = event_base_new();
-	char hname[256];
-	gethostname(hname, 256);
-	hostent* host = gethostbyname(hname);
-	if(!host)
+	if(!broadev) {
+		if(pending_refresh_tasks.load() == 0) {
+			is_refreshing = false;
+			if(!is_closing)
+				mainGame->btnLanRefresh->setEnabled(true);
+		}
 		return;
+	}
+	char hname[256];
+	if(gethostname(hname, static_cast<int>(sizeof(hname))) != 0) {
+		event_base_free(broadev);
+		if(pending_refresh_tasks.load() == 0) {
+			is_refreshing = false;
+			if(!is_closing)
+				mainGame->btnLanRefresh->setEnabled(true);
+		}
+		return;
+	}
+	hostent* host = gethostbyname(hname);
+	if(!host) {
+		event_base_free(broadev);
+		if(pending_refresh_tasks.load() == 0) {
+			is_refreshing = false;
+			if(!is_closing)
+				mainGame->btnLanRefresh->setEnabled(true);
+		}
+		return;
+	}
 	SOCKET reply = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if(reply == INVALID_SOCKET) {
+		event_base_free(broadev);
+		if(pending_refresh_tasks.load() == 0) {
+			is_refreshing = false;
+			if(!is_closing)
+				mainGame->btnLanRefresh->setEnabled(true);
+		}
+		return;
+	}
 	sockaddr_in reply_addr;
 	std::memset(&reply_addr, 0, sizeof reply_addr);
 	reply_addr.sin_family = AF_INET;
@@ -4398,13 +4821,29 @@ void DuelClient::BeginRefreshHost() {
 	reply_addr.sin_addr.s_addr = 0;
 	if(bind(reply, (sockaddr*)&reply_addr, sizeof(reply_addr)) == SOCKET_ERROR) {
 		closesocket(reply);
+		event_base_free(broadev);
+		if(pending_refresh_tasks.load() == 0) {
+			is_refreshing = false;
+			if(!is_closing)
+				mainGame->btnLanRefresh->setEnabled(true);
+		}
 		return;
 	}
 	timeval timeout = {3, 0};
 	resp_event = event_new(broadev, reply, EV_TIMEOUT | EV_READ | EV_PERSIST, BroadcastReply, broadev);
+	if(!resp_event) {
+		evutil_closesocket(reply);
+		event_base_free(broadev);
+		if(pending_refresh_tasks.load() == 0) {
+			is_refreshing = false;
+			if(!is_closing)
+				mainGame->btnLanRefresh->setEnabled(true);
+		}
+		return;
+	}
 	event_add(resp_event, &timeout);
+	pending_refresh_tasks.fetch_add(1);
 	std::thread(RefreshThread, broadev).detach();
-	//send request
 	SOCKADDR_IN local;
 	local.sin_family = AF_INET;
 	local.sin_port = htons(7922);
@@ -4415,7 +4854,7 @@ void DuelClient::BeginRefreshHost() {
 	HostRequest hReq;
 	hReq.identifier = NETWORK_CLIENT_ID;
 	for(int i = 0; i < 8; ++i) {
-		if(host->h_addr_list[i] == 0)
+		if(host->h_addr_list[i] == nullptr)
 			break;
 		unsigned int local_addr = 0;
 		std::memcpy(&local_addr, host->h_addr_list[i], sizeof local_addr);
@@ -4432,6 +4871,11 @@ void DuelClient::BeginRefreshHost() {
 		sendto(sSend, (const char*)&hReq, sizeof(HostRequest), 0, (sockaddr*)&sockTo, sizeof(sockaddr));
 		closesocket(sSend);
 	}
+	if(pending_refresh_tasks.load() == 0) {
+		is_refreshing = false;
+		if(!is_closing)
+			mainGame->btnLanRefresh->setEnabled(true);
+	}
 }
 int DuelClient::RefreshThread(event_base* broadev) {
 	event_base_dispatch(broadev);
@@ -4440,15 +4884,13 @@ int DuelClient::RefreshThread(event_base* broadev) {
 	evutil_closesocket(fd);
 	event_free(resp_event);
 	event_base_free(broadev);
-	is_refreshing = false;
 	return 0;
 }
 void DuelClient::BroadcastReply(evutil_socket_t fd, short events, void * arg) {
 	if(events & EV_TIMEOUT) {
 		evutil_closesocket(fd);
 		event_base_loopbreak((event_base*)arg);
-		if(!is_closing)
-			mainGame->btnLanRefresh->setEnabled(true);
+		RefreshSourceCompleted();
 	} else if(events & EV_READ) {
 		sockaddr_in bc_addr;
 		socklen_t sz = sizeof(sockaddr_in);
@@ -4474,9 +4916,10 @@ void DuelClient::BroadcastReply(evutil_socket_t fd, short events, void * arg) {
 				(ipaddr >> 16) & 0xff,
 				(ipaddr >> 24) & 0xff,
 				pHP->port);
-			hosts.push_back(std::wstring(host_fulladdr));			
+			hosts.push_back(std::wstring(host_fulladdr));
+			host_passwords.push_back(L"");
 			std::wstring hoststr;
-			hoststr.append(L"[");
+			hoststr.append(L"[LAN][");
 			hoststr.append(deckManager.GetLFListName(pHP->host.lflist));
 			hoststr.append(L"][");
 			hoststr.append(dataManager.GetSysString(pHP->host.rule + 1481));
@@ -4484,12 +4927,6 @@ void DuelClient::BroadcastReply(evutil_socket_t fd, short events, void * arg) {
 			// 映射模式显示：MODE_SINGLE(0)->1244, MODE_TAG(2)->1246, 跳过MODE_MATCH(1)->1245
 			int mode_string = (pHP->host.mode == MODE_SINGLE) ? 1244 : (pHP->host.mode == MODE_TAG) ? 1246 : 1244;
 			hoststr.append(dataManager.GetSysString(mode_string));
-			hoststr.append(L"][");
-			if(pHP->host.draw_count == 1 && pHP->host.start_hand == 5 && pHP->host.start_lp == 8000
-			        && !pHP->host.no_check_deck && !pHP->host.no_shuffle_deck
-			        && pHP->host.duel_rule == YGOPRO_DEFAULT_DUEL_RULE)
-				hoststr.append(dataManager.GetSysString(1247));
-			else hoststr.append(dataManager.GetSysString(1248));
 			hoststr.append(L"]");
 			wchar_t gamename[20];
 			BufferIO::CopyCharArray(pHP->name, gamename);
@@ -4498,6 +4935,286 @@ void DuelClient::BroadcastReply(evutil_socket_t fd, short events, void * arg) {
 			mainGame->gMutex.unlock();
 		}
 	}
+}
+
+std::vector<DuelClient::RemoteServerSource> DuelClient::BuildRemoteServerSources() {
+	std::vector<RemoteServerSource> sources;
+	sources.reserve(dataManager._serverStrings.size());
+	for (const auto& entry : dataManager._serverStrings) {
+		RemoteServerSource source{};
+		source.display_name = entry.first;
+		source.join_address = entry.second;
+		std::string join_utf8 = WideToUTF8(entry.second);
+		if(join_utf8.empty())
+			continue;
+		std::string host_part = join_utf8;
+		std::string port_part;
+		if(host_part.size() > 2 && host_part.front() == '[') {
+			auto closing = host_part.find(']');
+			if(closing != std::string::npos) {
+				std::string rest = host_part.substr(closing + 1);
+				host_part = host_part.substr(1, closing - 1);
+				if(!rest.empty() && rest[0] == ':')
+					port_part = rest.substr(1);
+			}
+		} else {
+			auto colon_pos = host_part.rfind(':');
+			if(colon_pos != std::string::npos && host_part.find(':', colon_pos + 1) == std::string::npos) {
+				port_part = host_part.substr(colon_pos + 1);
+				host_part = host_part.substr(0, colon_pos);
+			}
+		}
+		if(host_part.empty())
+			continue;
+		source.ws_host = host_part;
+		source.ws_port = 7922;
+		source.ws_path = "/";
+		source.filter = "waiting";
+		source.use_ssl = false;
+		sources.push_back(std::move(source));
+	}
+	return sources;
+}
+
+void DuelClient::RefreshSourceCompleted() {
+	auto remaining = pending_refresh_tasks.fetch_sub(1) - 1;
+	if(remaining <= 0) {
+		if(!is_closing)
+			mainGame->btnLanRefresh->setEnabled(true);
+		pending_refresh_tasks = 0;
+		is_refreshing = false;
+	}
+}
+void DuelClient::FetchRemoteRoomsThread(std::vector<RemoteServerSource> sources) {
+	for(const auto& source : sources) {
+		FetchRemoteRoomList(source);
+	}
+	RefreshSourceCompleted();
+}
+void DuelClient::FetchRemoteRoomList(const RemoteServerSource& source) {
+	if(source.use_ssl)
+		return; // 当前客户端仅支持未加密的WebSocket
+	std::vector<char> host_buffer(source.ws_host.begin(), source.ws_host.end());
+	host_buffer.push_back('\0');
+	unsigned int host_addr = LookupHost(host_buffer.data());
+	if(host_addr == 0)
+		return;
+	SOCKET sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if(sock == INVALID_SOCKET)
+		return;
+	struct SocketGuard {
+		explicit SocketGuard(SOCKET s) : sock(s) {}
+		~SocketGuard() {
+			if(sock != INVALID_SOCKET)
+				closesocket(sock);
+		}
+		SOCKET sock;
+	} guard(sock);
+	#ifdef _WIN32
+	DWORD timeout = 5000;
+	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&timeout), sizeof(timeout));
+	setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, reinterpret_cast<const char*>(&timeout), sizeof(timeout));
+	#else
+	timeval timeout{};
+	timeout.tv_sec = 5;
+	setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+	setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+	#endif
+	sockaddr_in sin{};
+	sin.sin_family = AF_INET;
+	sin.sin_port = htons(source.ws_port);
+	sin.sin_addr.s_addr = htonl(host_addr);
+	if(connect(sock, reinterpret_cast<sockaddr*>(&sin), sizeof(sin)) == SOCKET_ERROR)
+		return;
+	std::array<unsigned char, 16> key_bytes{};
+	std::random_device rd;
+	for(auto& b : key_bytes)
+		b = static_cast<unsigned char>(rd() & 0xFF);
+	std::string raw_key(reinterpret_cast<const char*>(key_bytes.data()), key_bytes.size());
+	std::string key_base64;
+	Base64::Encode(raw_key, &key_base64);
+	std::string path = BuildRoomlistPath(source);
+	std::ostringstream request;
+	request << "GET " << path << " HTTP/1.1\r\n";
+	request << "Host: " << source.ws_host;
+	if(!(source.ws_port == 80 || source.ws_port == 443))
+		request << ":" << source.ws_port;
+	request << "\r\n";
+	request << "Upgrade: websocket\r\n";
+	request << "Connection: Upgrade\r\n";
+	request << "Sec-WebSocket-Version: 13\r\n";
+	request << "Sec-WebSocket-Key: " << key_base64 << "\r\n";
+	request << "Origin: http://" << source.ws_host << "\r\n\r\n";
+	std::string request_str = request.str();
+	if(send(sock, request_str.c_str(), static_cast<int>(request_str.size()), 0) == SOCKET_ERROR)
+		return;
+	std::string header;
+	std::vector<unsigned char> stash;
+	auto read_handshake = [&](std::string& out_header, std::vector<unsigned char>& out_stash) -> bool {
+		std::string accumulated;
+		std::array<char, 1024> buffer{};
+		const std::string delimiter = "\r\n\r\n";
+		while(true) {
+			int received = recv(sock, buffer.data(), static_cast<int>(buffer.size()), 0);
+			if(received <= 0)
+				return false;
+			accumulated.append(buffer.data(), received);
+			auto pos = accumulated.find(delimiter);
+			if(pos != std::string::npos) {
+				out_header = accumulated.substr(0, pos + delimiter.size());
+				out_stash.insert(out_stash.end(), accumulated.begin() + pos + delimiter.size(), accumulated.end());
+				return true;
+			}
+			if(accumulated.size() > 8192)
+				return false;
+		}
+	};
+	if(!read_handshake(header, stash))
+		return;
+	if(header.rfind("HTTP/1.1 101", 0) != 0 && header.rfind("HTTP/1.0 101", 0) != 0)
+		return;
+	struct Frame {
+		uint8_t opcode = 0;
+		std::vector<unsigned char> payload;
+	};
+	auto read_frame = [&](Frame& frame) -> bool {
+		auto ensure_bytes = [&](size_t count) -> bool {
+			while(stash.size() < count) {
+				std::array<unsigned char, 1024> buf{};
+				int received = recv(sock, reinterpret_cast<char*>(buf.data()), static_cast<int>(buf.size()), 0);
+				if(received <= 0)
+					return false;
+				stash.insert(stash.end(), buf.begin(), buf.begin() + received);
+			}
+			return true;
+		};
+		if(!ensure_bytes(2))
+			return false;
+		uint8_t b1 = stash[0];
+		uint8_t b2 = stash[1];
+		uint8_t opcode = b1 & 0x0F;
+		bool masked = (b2 & 0x80) != 0;
+		uint64_t payload_len = b2 & 0x7F;
+		size_t offset = 2;
+		if(payload_len == 126) {
+			if(!ensure_bytes(offset + 2))
+				return false;
+			payload_len = (static_cast<uint64_t>(stash[offset]) << 8) | static_cast<uint64_t>(stash[offset + 1]);
+			offset += 2;
+		} else if(payload_len == 127) {
+			if(!ensure_bytes(offset + 8))
+				return false;
+			payload_len = 0;
+			for(int i = 0; i < 8; ++i)
+				payload_len = (payload_len << 8) | stash[offset + i];
+			offset += 8;
+		}
+		std::array<unsigned char, 4> masking_key{};
+		if(masked) {
+			if(!ensure_bytes(offset + 4))
+				return false;
+			std::copy_n(stash.begin() + offset, 4, masking_key.begin());
+			offset += 4;
+		}
+		if(payload_len > 2ull * 1024 * 1024)
+			return false;
+		if(!ensure_bytes(offset + static_cast<size_t>(payload_len)))
+			return false;
+		frame.payload.assign(stash.begin() + offset, stash.begin() + offset + static_cast<size_t>(payload_len));
+		if(masked) {
+			for(size_t i = 0; i < frame.payload.size(); ++i)
+				frame.payload[i] ^= masking_key[i % 4];
+		}
+		stash.erase(stash.begin(), stash.begin() + offset + static_cast<size_t>(payload_len));
+		frame.opcode = opcode;
+		return true;
+	};
+	bool init_received = false;
+	std::vector<std::wstring> display_entries;
+	std::vector<std::wstring> join_entries;
+	std::vector<std::wstring> pass_entries;
+	while(!init_received) {
+		Frame frame;
+		if(!read_frame(frame))
+			break;
+		if(frame.opcode == 0x8) // CLOSE
+			break;
+		if(frame.opcode != 0x1)
+			continue;
+		std::string payload(frame.payload.begin(), frame.payload.end());
+		JsonValue root;
+		JsonParser parser(payload);
+		if(!parser.Parse(root) || root.type != JsonValue::Type::Object)
+			continue;
+		const JsonValue* event_value = root.Find("event");
+		if(!event_value || event_value->type != JsonValue::Type::String)
+			continue;
+		if(event_value->string_value != "init")
+			continue;
+		const JsonValue* data_value = JsonGetArray(root, "data");
+		if(!data_value)
+			break;
+		for(const auto& room : data_value->array_value) {
+			if(room.type != JsonValue::Type::Object)
+				continue;
+			std::string room_id = JsonGetString(room, "id");
+			std::string room_title = JsonGetString(room, "title");
+			const JsonValue* options = JsonGetObject(room, "options");
+			if(!options)
+				continue;
+			HostInfo info{};
+			info.lflist = static_cast<uint32_t>(JsonGetInt(*options, "lflist", 0));
+			info.rule = static_cast<uint8_t>(JsonGetInt(*options, "rule", 0));
+			info.mode = static_cast<uint8_t>(JsonGetInt(*options, "mode", 0));
+			info.duel_rule = static_cast<uint8_t>(JsonGetInt(*options, "duel_rule", 0));
+			info.no_check_deck = JsonGetBool(*options, "no_check_deck", false);
+			info.no_shuffle_deck = JsonGetBool(*options, "no_shuffle_deck", false);
+			info.start_lp = static_cast<int32_t>(JsonGetInt(*options, "start_lp", 8000));
+			info.start_hand = static_cast<uint8_t>(JsonGetInt(*options, "start_hand", 5));
+			info.draw_count = static_cast<uint8_t>(JsonGetInt(*options, "draw_count", 1));
+			info.time_limit = static_cast<uint16_t>(JsonGetInt(*options, "time_limit", 0));
+			std::wstring display;
+			display.append(L"[");
+			display.append(source.display_name);
+			display.append(L"][");
+			display.append(deckManager.GetLFListName(info.lflist));
+			display.append(L"][");
+			display.append(dataManager.GetSysString(info.rule + 1481));
+			display.append(L"][");
+			int mode_string = (info.mode == MODE_SINGLE) ? 1244 : (info.mode == MODE_TAG) ? 1246 : 1244;
+			display.append(dataManager.GetSysString(mode_string));
+			display.append(L"] ");
+			display.append(Utf8ToWide(room_title));
+			display_entries.push_back(display);
+			join_entries.push_back(source.join_address);
+			pass_entries.push_back(Utf8ToWide(room_id));
+		}
+		init_received = true;
+	}
+	if(!display_entries.empty()) {
+		mainGame->gMutex.lock();
+		for(size_t i = 0; i < display_entries.size(); ++i) {
+			hosts.push_back(join_entries[i]);
+			host_passwords.push_back(pass_entries[i]);
+			mainGame->lstHostList->addItem(display_entries[i].c_str());
+		}
+		mainGame->gMutex.unlock();
+	}
+}
+std::string DuelClient::BuildRoomlistPath(const RemoteServerSource& source) {
+	std::string path = source.ws_path.empty() ? "/" : source.ws_path;
+	if(path.empty())
+		path = "/";
+	if(!source.filter.empty()) {
+		if(path.find('?') == std::string::npos) {
+			path += "?filter=" + source.filter;
+		} else if(path.find("filter=") == std::string::npos) {
+			if(path.back() != '?' && path.back() != '&')
+				path += "&";
+			path += "filter=" + source.filter;
+		}
+	}
+	return path;
 }
 
 unsigned int DuelClient::LookupHost(char *host) {

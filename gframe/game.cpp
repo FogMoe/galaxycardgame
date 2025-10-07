@@ -2249,6 +2249,7 @@ void Game::CloseDuelWindow() {
 	lstHostList->clear();
 	lstServerList->clear();
 	DuelClient::hosts.clear();
+	DuelClient::host_passwords.clear();
 	DuelClient::hosts_srvpro.clear();
 	ClearTextures();
 	ResizeChatInputWindow();

@@ -527,6 +527,10 @@ bool MenuHandler::OnEvent(const irr::SEvent& event) {
 					break;
 				}
 				mainGame->ebJoinHost->setText(DuelClient::hosts[sel].c_str());
+				if(sel < static_cast<int>(DuelClient::host_passwords.size()))
+					mainGame->ebJoinPass->setText(DuelClient::host_passwords[sel].c_str());
+				else
+					mainGame->ebJoinPass->setText(L"");
 				break;
 			}
 			case LISTBOX_REPLAY_LIST: {

@@ -4,6 +4,8 @@
 #include <vector>
 #include <set>
 #include <random>
+#include <string>
+#include <atomic>
 #include "config.h"
 #include "network.h"
 
@@ -50,6 +52,16 @@ public:
 
 class DuelClient {
 private:
+	struct RemoteServerSource {
+		std::wstring display_name;
+		std::wstring join_address;
+		std::string ws_host;
+		uint16_t ws_port;
+		std::string ws_path;
+		std::string filter;
+		bool use_ssl;
+	};
+
 	static unsigned int connect_state;
 	static unsigned char response_buf[SIZE_RETURN_VALUE];
 	static size_t response_len;
@@ -68,10 +80,16 @@ private:
 	static wchar_t event_string[256];
 	static std::mt19937 rnd;
 	static std::uniform_real_distribution<float> real_dist;
+	static std::atomic<int> pending_refresh_tasks;
 	static bool is_refreshing;
 	static int match_kill;
 	static event* resp_event;
 	static std::set<std::pair<unsigned int, unsigned short>> remotes;
+	static std::vector<RemoteServerSource> BuildRemoteServerSources();
+	static void FetchRemoteRoomsThread(std::vector<RemoteServerSource> sources);
+	static void FetchRemoteRoomList(const RemoteServerSource& source);
+	static void RefreshSourceCompleted();
+	static std::string BuildRoomlistPath(const RemoteServerSource& source);
 
 public:
 	static unsigned int temp_ip;
@@ -131,6 +149,7 @@ public:
 
 	static std::vector<std::wstring> hosts;
 	static std::vector<std::wstring> hosts_srvpro;
+	static std::vector<std::wstring> host_passwords;
 	static bool is_srvpro;
 	static void BeginRefreshHost();
 	static int RefreshThread(event_base* broadev);
