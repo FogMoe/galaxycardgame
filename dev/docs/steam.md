@@ -21,9 +21,10 @@
   - 若 `steam_sdk_available == true`，调用 `SteamAPI_RunCallbacks()`。
   - 根据状态自动更新 Rich Presence：
     - `In Battle`（牌局中，`dInfo.isStarted == true`）；
+    - `In Room`（房间/准备界面，`wHostPrepare` 可见）；
     - `Deck Builder`（组卡界面，`is_building == true` 且未开局）；
     - `Main Menu`（其余情况）。
-  - 状态字符串会被转换为 `#Status_*` token，例如 `Main Menu` → `#Status_MAIN_MENU`。请在 Steamworks 后台对应配置 Enhanced Rich Presence 显示文案。
+- 状态字符串会被转换为 `#Status_*` token，例如 `Main Menu` → `#Status_MAIN_MENU`、`In Room` → `#Status_IN_ROOM`。请在 Steamworks 后台对应配置 Enhanced Rich Presence 显示文案。
 - 游戏退出时调用 `SteamAPI_Shutdown()`，并清空本地状态缓存。
 
 ## 编译配置

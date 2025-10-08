@@ -6,5 +6,6 @@
         "#Status_MAIN_MENU"        "Main Menu"
         "#Status_DECK_BUILDER"     "Deck Builder"
         "#Status_IN_BATTLE"        "In Battle"
+        "#Status_IN_ROOM"          "In Room"
     }
 }

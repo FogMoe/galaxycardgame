@@ -1194,6 +1194,8 @@ void Game::MainLoop() {
 			const char* presence = nullptr;
 			if(dInfo.isStarted)
 				presence = "In Battle";
+			else if(wHostPrepare && wHostPrepare->isVisible())
+				presence = "In Room";
 			else if(is_building)
 				presence = "Deck Builder";
 			else
