@@ -22,6 +22,7 @@
 #include <list>
 #include <mutex>
 #include <functional>
+#include <string>
 
 #ifndef YGOPRO_DEFAULT_DUEL_RULE
 #define YGOPRO_DEFAULT_DUEL_RULE			5
@@ -239,6 +240,9 @@ public:
 	void CloseGameButtons();
 	void CloseGameWindow();
 	void CloseDuelWindow();
+#ifdef YGOPRO_USE_STEAM_SDK
+	void UpdateSteamRichPresence(const char* status);
+#endif
 
 	int LocalPlayer(int player) const;
 	int OppositePlayer(int player);
@@ -333,6 +337,10 @@ public:
 	bool always_chain{};
 	bool ignore_chain{};
 	bool chain_when_avail{};
+#ifdef YGOPRO_USE_STEAM_SDK
+	bool steam_sdk_available{};
+	std::string steam_presence_state;
+#endif
 
 	bool is_building{};
 	bool is_siding{};

@@ -1,0 +1,10 @@
+"lang"
+{
+    "Language"    "schinese"
+    "Tokens"
+    {
+        "#Status_MAIN_MENU"        "主菜单"
+        "#Status_DECK_BUILDER"     "卡组构建中"
+        "#Status_IN_BATTLE"        "战斗中"
+    }
+}

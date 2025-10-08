@@ -14,6 +14,11 @@
 #include <regex>
 #include <thread>
 #include <set>
+#include <cstring>
+#include <cctype>
+#ifdef YGOPRO_USE_STEAM_SDK
+#include <steam/steam_api.h>
+#endif
 
 unsigned short PRO_VERSION = 0x1001;
 
@@ -137,6 +142,16 @@ bool Game::Initialize() {
 	dataManager.LoadServerList("servers.conf");
 	dataManager.LoadDB(L"specials/special.cdb");
 	env = device->getGUIEnvironment();
+#ifdef YGOPRO_USE_STEAM_SDK
+	if(!steam_sdk_available) {
+		if(!SteamAPI_Init()) {
+			ErrorLog("SteamAPI_Init failed; Steam rich presence disabled.");
+		} else {
+			steam_sdk_available = true;
+			UpdateSteamRichPresence("Main Menu");
+		}
+	}
+#endif
 	numFont = irr::gui::CGUITTFont::createTTFont(env, gameConf.numfont, 16);
 	if(!numFont) {
 		const wchar_t* numFontPaths[] = {
@@ -1174,6 +1189,19 @@ void Game::MainLoop() {
 			}
 		}
 		driver->endScene();
+#ifdef YGOPRO_USE_STEAM_SDK
+		if(steam_sdk_available) {
+			const char* presence = nullptr;
+			if(dInfo.isStarted)
+				presence = "In Battle";
+			else if(is_building)
+				presence = "Deck Builder";
+			else
+				presence = "Main Menu";
+			UpdateSteamRichPresence(presence);
+			SteamAPI_RunCallbacks();
+		}
+#endif
 		if(closeSignal.Wait(1))
 			CloseDuelWindow();
 		fps++;
@@ -1202,6 +1230,13 @@ void Game::MainLoop() {
 		SingleMode::StopPlay(true);
 	std::this_thread::sleep_for(std::chrono::milliseconds(500));
 	SaveConfig();
+#ifdef YGOPRO_USE_STEAM_SDK
+	if(steam_sdk_available) {
+		SteamAPI_Shutdown();
+		steam_sdk_available = false;
+		steam_presence_state.clear();
+	}
+#endif
 	device->drop();
 }
 void Game::RefreshTimeDisplay() {
@@ -2144,6 +2179,32 @@ void Game::ErrorLog(const char* msg) {
 	std::fprintf(fp, "[%s]%s\n", timebuf, msg);
 	std::fclose(fp);
 }
+#ifdef YGOPRO_USE_STEAM_SDK
+void Game::UpdateSteamRichPresence(const char* status) {
+	if(!steam_sdk_available)
+		return;
+	if(status) {
+		if(steam_presence_state == status)
+			return;
+		steam_presence_state = status;
+		SteamFriends()->SetRichPresence("status", status);
+		std::string token = "#Status_";
+		token.reserve(token.size() + steam_presence_state.size());
+		for(char c : steam_presence_state) {
+			if(std::isalnum(static_cast<unsigned char>(c)))
+				token.push_back(static_cast<char>(std::toupper(static_cast<unsigned char>(c))));
+			else
+				token.push_back('_');
+		}
+		SteamFriends()->SetRichPresence("steam_display", token.c_str());
+	} else {
+		if(steam_presence_state.empty())
+			return;
+		steam_presence_state.clear();
+		SteamFriends()->ClearRichPresence();
+	}
+}
+#endif
 void Game::initUtils() {
 	//user files
 	FileSystem::MakeDir("replay");

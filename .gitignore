@@ -100,3 +100,7 @@ core*
 /patch.exe.manifest
 /patch.exe
 /diff.exe
+
+# Steam SDK
+/steamsdk*
+steam_appid.txt

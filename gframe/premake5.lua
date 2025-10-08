@@ -71,6 +71,27 @@ project "YGOPro"
         end
     end
 
+    if USE_STEAMSDK then
+        local steamInclude = SteamSdkPath("public")
+        if steamInclude then
+            defines { "YGOPRO_USE_STEAM_SDK" }
+            includedirs { steamInclude }
+            filter { "system:windows", "platforms:x64" }
+                libdirs { SteamSdkPath("redistributable_bin/win64") }
+                links { "steam_api64" }
+            filter { "system:windows", "platforms:Win32" }
+                libdirs { SteamSdkPath("redistributable_bin") }
+                links { "steam_api" }
+            filter "system:linux"
+                libdirs { SteamSdkPath("redistributable_bin/linux64") }
+                links { "steam_api" }
+            filter "system:macosx"
+                libdirs { SteamSdkPath("redistributable_bin/osx") }
+                links { "steam_api" }
+            filter {}
+        end
+    end
+
     filter "system:windows"
         entrypoint "mainCRTStartup"
         defines { "_IRR_WCHAR_FILESYSTEM" }

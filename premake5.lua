@@ -26,6 +26,34 @@ MINIAUDIO_BUILD_OPUS_VORBIS = os.istarget("windows")
 IRRKLANG_PRO = false
 IRRKLANG_PRO_BUILD_IKPMP3 = false
 
+USE_STEAMSDK = false
+STEAM_SDK_DIR = nil
+
+local function normalizeForTarget(pathValue)
+    if not pathValue then
+        return nil
+    end
+    if os.istarget("windows") then
+        local drive, rest = pathValue:match("^/mnt/([a-zA-Z])/(.*)")
+        if drive and rest then
+            pathValue = drive:upper() .. ":/" .. rest
+        end
+        pathValue = pathValue:gsub("\\", "/")
+    end
+    return pathValue
+end
+
+function SteamSdkPath(subpath)
+    if not STEAM_SDK_DIR then
+        return nil
+    end
+    local full = STEAM_SDK_DIR
+    if subpath and #subpath > 0 then
+        full = path.join(full, subpath)
+    end
+    return normalizeForTarget(full)
+end
+
 -- Read settings from command line or environment variables
 
 newoption { trigger = "build-lua", category = "YGOPro - lua", description = "" }
@@ -82,6 +110,8 @@ newoption { trigger = "no-irrklang-pro", category = "YGOPro - irrklang - pro", d
 newoption { trigger = "irrklang-pro-release-lib-dir", category = "YGOPro - irrklang - pro", description = "", value = "PATH" }
 newoption { trigger = "irrklang-pro-debug-lib-dir", category = "YGOPro - irrklang - pro", description = "", value = "PATH" }
 newoption { trigger = 'build-ikpmp3', category = "YGOPro - irrklang - ikpmp3", description = "" }
+
+newoption { trigger = "steamsdk", category = "YGOPro - steam", description = "Link Steamworks SDK from ./steamsdk" }
 
 newoption { trigger = "mac-arm", category = "YGOPro", description = "Compile for Apple Silicon Mac" }
 newoption { trigger = "mac-intel", category = "YGOPro", description = "Compile for Intel Mac" }
@@ -294,6 +324,23 @@ if USE_AUDIO then
     end
 end
 
+local steamsdkOption = GetParam("steamsdk")
+if steamsdkOption then
+    USE_STEAMSDK = true
+    local steamsdkRoot = "steamsdk"
+    if type(steamsdkOption) == "string" then
+        local trimmed = steamsdkOption:match("^%s*(.-)%s*$")
+        if trimmed ~= "" and trimmed ~= "true" and trimmed ~= "1" then
+            steamsdkRoot = trimmed
+        end
+    end
+    local resolvedSteamSdk = path.getabsolute(steamsdkRoot)
+    if not os.isdir(resolvedSteamSdk) then
+        error("Steamworks SDK directory not found at " .. resolvedSteamSdk)
+    end
+    STEAM_SDK_DIR = normalizeForTarget(resolvedSteamSdk)
+end
+
 IS_ARM=false
 
 function spawn(cmd)
@@ -438,13 +485,13 @@ workspace "YGOPro"
     filter { "configurations:Release", "action:vs*" }
         linktimeoptimization "On"
         staticruntime "On"
-        disablewarnings { "4244", "4267", "4838", "4996", "6011", "6031", "6054", "6262" }
+        disablewarnings { "4244", "4267", "4828", "4838", "4996", "6011", "6031", "6054", "6262" }
 
     filter { "configurations:Release", "not action:vs*" }
         defines "NDEBUG"
 
     filter { "configurations:Debug", "action:vs*" }
-        disablewarnings { "6011", "6031", "6054", "6262" }
+        disablewarnings { "4828", "6011", "6031", "6054", "6262" }
 
     filter "action:vs*"
         cdialect "C11"
