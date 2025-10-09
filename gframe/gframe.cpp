@@ -4,6 +4,7 @@
 #include <event2/thread.h>
 #include <clocale>
 #include <memory>
+#include <vector>
 
 #ifdef __APPLE__
 #import <CoreFoundation/CoreFoundation.h>

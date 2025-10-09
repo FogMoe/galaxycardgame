@@ -14,8 +14,10 @@
 #include <regex>
 #include <thread>
 #include <set>
+#include <vector>
 #include <cstring>
 #include <cctype>
+#include <iomanip>
 #ifdef YGOPRO_USE_STEAM_SDK
 #include <steam/steam_api.h>
 #endif
@@ -25,6 +27,80 @@ unsigned short PRO_VERSION = 0x1001;
 namespace ygo {
 
 Game* mainGame;
+
+#ifdef YGOPRO_USE_STEAM_SDK
+namespace {
+
+std::string WideToUTF8(const std::wstring& input) {
+	if(input.empty())
+		return {};
+	std::vector<char> buffer((input.size() + 1) * 4);
+	BufferIO::EncodeUTF8String(input.c_str(), buffer.data(), buffer.size());
+	return std::string(buffer.data());
+}
+
+std::wstring Utf8ToWide(const std::string& input) {
+	if(input.empty())
+		return {};
+	std::vector<wchar_t> buffer(input.size() + 1);
+	BufferIO::DecodeUTF8String(input.c_str(), buffer.data(), buffer.size());
+	return std::wstring(buffer.data());
+}
+
+std::string SteamUrlEncode(const std::string& value) {
+	std::string out;
+	out.reserve(value.size() * 3);
+	for(unsigned char c : value) {
+		if((c >= 'A' && c <= 'Z') ||
+			(c >= 'a' && c <= 'z') ||
+			(c >= '0' && c <= '9') ||
+			c == '-' || c == '_' || c == '.' || c == '~') {
+			out.push_back(static_cast<char>(c));
+		} else {
+			char buf[4];
+			std::snprintf(buf, sizeof(buf), "%%%02X", c);
+			out.append(buf);
+		}
+	}
+	return out;
+}
+
+std::string SteamUrlDecode(const std::string& value) {
+	std::string out;
+	out.reserve(value.size());
+	for(size_t i = 0; i < value.size(); ++i) {
+		char ch = value[i];
+		if(ch == '%' && i + 2 < value.size()) {
+			unsigned int byte = 0;
+			char hi = value[i + 1];
+			char lo = value[i + 2];
+			unsigned char hi_uc = static_cast<unsigned char>(hi);
+			unsigned char lo_uc = static_cast<unsigned char>(lo);
+			if(std::isxdigit(hi_uc) && std::isxdigit(lo_uc)) {
+				byte = (std::isdigit(hi_uc) ? hi_uc - '0' : (std::toupper(hi_uc) - 'A' + 10)) << 4;
+				byte |= (std::isdigit(lo_uc) ? lo_uc - '0' : (std::toupper(lo_uc) - 'A' + 10));
+				out.push_back(static_cast<char>(byte));
+				i += 2;
+				continue;
+			}
+		}
+		out.push_back(ch);
+	}
+	return out;
+}
+
+std::wstring IPv4ToWideString(unsigned int host_order_ip) {
+	wchar_t buffer[32];
+	myswprintf(buffer, L"%u.%u.%u.%u",
+		(host_order_ip >> 24) & 0xFF,
+		(host_order_ip >> 16) & 0xFF,
+		(host_order_ip >> 8) & 0xFF,
+		host_order_ip & 0xFF);
+	return buffer;
+}
+
+}
+#endif
 
 void DuelInfo::Clear() {
 	isStarted = false;
@@ -1204,7 +1280,9 @@ void Game::MainLoop() {
 				presence = "Main Menu";
 			TryUnlockPendingSteamAchievements();
 			UpdateSteamRichPresence(presence);
+			UpdateSteamInvitePresence();
 			SteamAPI_RunCallbacks();
+			ProcessSteamJoinQueue();
 		}
 #endif
 		if(closeSignal.Wait(1))
@@ -2236,6 +2314,195 @@ void Game::UpdateSteamRichPresence(const char* status) {
 		steam_presence_state.clear();
 		SteamFriends()->ClearRichPresence();
 	}
+}
+#endif
+
+#ifdef YGOPRO_USE_STEAM_SDK
+
+std::string Game::BuildSteamConnectString(const std::string& host_utf8, unsigned short port, const std::string& pass_utf8, bool is_dedicated) const {
+	std::string encoded_host = SteamUrlEncode(host_utf8);
+	std::string encoded_pass = SteamUrlEncode(pass_utf8);
+	std::ostringstream oss;
+	oss << (is_dedicated ? "dedicated" : "lan") << '|' << encoded_host << '|' << port;
+	if(!encoded_pass.empty())
+		oss << '|' << encoded_pass;
+	return oss.str();
+}
+
+bool Game::ParseSteamConnectString(const std::string& connect, SteamConnectPayload& payload) const {
+	std::vector<std::string> parts;
+	size_t start = 0;
+	while(start <= connect.size()) {
+		auto pos = connect.find('|', start);
+		if(pos == std::string::npos) {
+			parts.push_back(connect.substr(start));
+			break;
+		}
+		parts.push_back(connect.substr(start, pos - start));
+		start = pos + 1;
+	}
+	if(parts.size() < 3)
+		return false;
+	payload.is_dedicated = (parts[0] != "lan");
+	payload.host = Utf8ToWide(SteamUrlDecode(parts[1]));
+	if(payload.host.empty())
+		return false;
+	const std::string& port_str = parts[2];
+	char* endptr = nullptr;
+	long port_val = std::strtol(port_str.c_str(), &endptr, 10);
+	if(!endptr || *endptr != '\0' || port_val <= 0 || port_val > 65535)
+		return false;
+	payload.port = static_cast<unsigned short>(port_val);
+	if(parts.size() >= 4)
+		payload.pass = Utf8ToWide(SteamUrlDecode(parts[3]));
+	else
+		payload.pass.clear();
+	return true;
+}
+
+void Game::UpdateSteamInvitePresence() {
+	if(!steam_sdk_available || !steam_connect_dirty)
+		return;
+	if(steam_room_is_dedicated && !steam_connect_string.empty()) {
+		SteamFriends()->SetRichPresence("connect", steam_connect_string.c_str());
+	} else {
+		SteamFriends()->SetRichPresence("connect", "");
+	}
+	steam_connect_dirty = false;
+}
+
+void Game::ClearSteamInvitePresence() {
+	steam_invite_host.clear();
+	steam_invite_port = 0;
+	steam_invite_pass.clear();
+	steam_connect_string.clear();
+	steam_room_is_dedicated = false;
+	steam_connect_dirty = true;
+	UpdateSteamInvitePresence();
+}
+
+void Game::OnNetworkJoinedRoom(const std::wstring& host_text, const std::wstring& pass_text, unsigned int ip, unsigned short port, bool is_dedicated) {
+	steam_room_is_dedicated = is_dedicated;
+	steam_processing_join = false;
+	std::wstring host_w = !host_text.empty() ? host_text : IPv4ToWideString(ip);
+	std::wstring pass_w = pass_text;
+	steam_invite_host = WideToUTF8(host_w);
+	steam_invite_port = port;
+	steam_invite_pass = WideToUTF8(pass_w);
+	if(steam_room_is_dedicated && !steam_invite_host.empty()) {
+		steam_connect_string = BuildSteamConnectString(steam_invite_host, steam_invite_port, steam_invite_pass, true);
+		steam_connect_dirty = true;
+		UpdateSteamInvitePresence();
+	} else {
+		ClearSteamInvitePresence();
+	}
+	ProcessSteamJoinQueue();
+}
+
+void Game::OnNetworkLeftRoom() {
+	steam_processing_join = false;
+	ClearSteamInvitePresence();
+	ProcessSteamJoinQueue();
+}
+
+void Game::QueueSteamConnectString(const std::string& connect) {
+	if(connect.empty())
+		return;
+	if(is_building && !is_siding) {
+		AddLog(L"[Steam] 正在编辑卡组，无法加入好友房间。");
+		if(env)
+			env->addMessageBox(L"", L"[Steam] 正在编辑卡组，无法加入好友房间。");
+		return;
+	}
+	if(dInfo.isStarted || dInfo.isInDuel) {
+		AddLog(L"[Steam] 当前正在对局，无法加入好友房间。");
+		if(env)
+			env->addMessageBox(L"", L"[Steam] 当前正在对局，无法加入好友房间。");
+		return;
+	}
+	steam_join_queue.clear();
+	steam_join_queue.push_back(connect);
+	if(DuelClient::IsInRoom()) {
+		AddLog(L"[Steam] 已收到好友邀请，退出当前房间后将尝试加入。");
+	} else {
+		ProcessSteamJoinQueue();
+	}
+}
+
+void Game::ProcessSteamJoinQueue() {
+	if(!steam_sdk_available || steam_join_queue.empty())
+		return;
+	if(steam_processing_join)
+		return;
+	if(DuelClient::IsInRoom()) {
+		return;
+	}
+	SteamConnectPayload payload;
+	std::string connect = steam_join_queue.front();
+	steam_join_queue.pop_front();
+	if(!ParseSteamConnectString(connect, payload)) {
+		AddLog(L"[Steam] 无法解析好友邀请。");
+		return;
+	}
+	if(!TryExecuteSteamJoin(payload)) {
+		AddLog(L"[Steam] 加入好友房间失败。");
+	}
+}
+
+bool Game::TryExecuteSteamJoin(const SteamConnectPayload& payload) {
+	if(payload.host.empty() || payload.port == 0)
+		return false;
+	if(DuelClient::IsInRoom()) {
+		return false;
+	}
+	PrepareSteamJoinUI();
+	char host_utf8[128]{};
+	BufferIO::EncodeUTF8(payload.host.c_str(), host_utf8);
+	auto remote = DuelClient::ParseHost(host_utf8);
+	if(!remote.isValid())
+		return false;
+	BufferIO::CopyWideString(payload.host.c_str(), gameConf.lasthost);
+	BufferIO::CopyWideString(payload.pass.c_str(), gameConf.roompass);
+	ebJoinHost->setText(payload.host.c_str());
+	ebJoinPass->setText(payload.pass.c_str());
+	auto source = DuelClient::ResolveJoinSource(payload.host.c_str(), payload.pass.c_str());
+	DuelClient::PrepareConnectionMetadata(payload.host, payload.pass, source);
+	if(DuelClient::StartClient(remote.host, remote.port, false)) {
+		btnCreateHost->setEnabled(false);
+		btnJoinHost->setEnabled(false);
+		btnJoinCancel->setEnabled(false);
+		steam_processing_join = true;
+		AddLog(L"[Steam] 正在加入好友房间...");
+		return true;
+	}
+	steam_join_queue.clear();
+	return false;
+}
+
+void Game::PrepareSteamJoinUI() {
+	if(wServerList && wServerList->isVisible())
+		HideElement(wServerList);
+	if(wCreateHost && wCreateHost->isVisible())
+		HideElement(wCreateHost);
+	if(wMainMenu && wMainMenu->isVisible())
+		HideElement(wMainMenu);
+	if(wLanWindow && !wLanWindow->isVisible())
+		ShowElement(wLanWindow);
+	if(btnCreateHost)
+		btnCreateHost->setEnabled(true);
+	if(btnJoinHost)
+		btnJoinHost->setEnabled(true);
+	if(btnJoinCancel)
+		btnJoinCancel->setEnabled(true);
+}
+
+void Game::OnSteamRichPresenceJoinRequested(GameRichPresenceJoinRequested_t* param) {
+	if(!param)
+		return;
+	std::string connect = param->m_rgchConnect;
+	if(connect.empty())
+		return;
+	QueueSteamConnectString(connect);
 }
 #endif
 void Game::OnDeckBuilderClosed() {

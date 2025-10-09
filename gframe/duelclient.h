@@ -24,6 +24,14 @@ public:
 	}
 };
 
+enum class JoinSource {
+	Manual,
+	LanBroadcast,
+	RemoteServer,
+	SRVPro,
+	LocalHost
+};
+
 #ifndef _WIN32
 #include <resolv.h>
 #include <arpa/nameser.h>
@@ -150,10 +158,15 @@ public:
 	static std::vector<std::wstring> hosts;
 	static std::vector<std::wstring> hosts_srvpro;
 	static std::vector<std::wstring> host_passwords;
+	static std::vector<JoinSource> host_sources;
 	static bool is_srvpro;
 	static void BeginRefreshHost();
 	static int RefreshThread(event_base* broadev);
 	static void BroadcastReply(evutil_socket_t fd, short events, void* arg);
+
+	static void PrepareConnectionMetadata(const std::wstring& host_text, const std::wstring& pass_text, JoinSource source);
+	static JoinSource ResolveJoinSource(const wchar_t* host_text, const wchar_t* pass_text);
+	static bool IsInRoom();
 };
 }
 

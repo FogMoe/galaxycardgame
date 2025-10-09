@@ -23,6 +23,10 @@
 #include <mutex>
 #include <functional>
 #include <string>
+#include <deque>
+#ifdef YGOPRO_USE_STEAM_SDK
+#include <steam/steam_api.h>
+#endif
 
 #ifndef YGOPRO_DEFAULT_DUEL_RULE
 #define YGOPRO_DEFAULT_DUEL_RULE			5
@@ -243,6 +247,22 @@ public:
 #ifdef YGOPRO_USE_STEAM_SDK
 	void UpdateSteamRichPresence(const char* status);
 	void TryUnlockPendingSteamAchievements();
+	void OnNetworkJoinedRoom(const std::wstring& host_text, const std::wstring& pass_text, unsigned int ip, unsigned short port, bool is_dedicated);
+	void OnNetworkLeftRoom();
+	void QueueSteamConnectString(const std::string& connect);
+	struct SteamConnectPayload {
+		std::wstring host;
+		unsigned short port{};
+		std::wstring pass;
+		bool is_dedicated{};
+	};
+	void UpdateSteamInvitePresence();
+	void ClearSteamInvitePresence();
+	void ProcessSteamJoinQueue();
+	bool TryExecuteSteamJoin(const SteamConnectPayload& payload);
+	bool ParseSteamConnectString(const std::string& connect, SteamConnectPayload& payload) const;
+	std::string BuildSteamConnectString(const std::string& host_utf8, unsigned short port, const std::string& pass_utf8, bool is_dedicated) const;
+	void PrepareSteamJoinUI();
 #endif
 	void OnDeckBuilderClosed();
 	void OnLocalPlayerWin();
@@ -346,6 +366,15 @@ public:
 	bool steam_first_launch_pending{};
 	bool steam_first_deck_build_pending{};
 	bool steam_first_victory_pending{};
+	bool steam_room_is_dedicated{};
+	std::string steam_invite_host;
+	unsigned short steam_invite_port{};
+	std::string steam_invite_pass;
+	std::string steam_connect_string;
+	bool steam_connect_dirty{};
+	std::deque<std::string> steam_join_queue;
+	bool steam_processing_join{};
+	STEAM_CALLBACK(Game, OnSteamRichPresenceJoinRequested, GameRichPresenceJoinRequested_t);
 #endif
 
 	bool is_building{};

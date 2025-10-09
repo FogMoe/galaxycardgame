@@ -69,6 +69,12 @@ bool MenuHandler::OnEvent(const irr::SEvent& event) {
 			case BUTTON_JOIN_HOST: {
 				bot_mode = false;
 				mainGame->TrimText(mainGame->ebJoinHost);
+				const wchar_t* host_text_raw = mainGame->ebJoinHost->getText();
+				const wchar_t* pass_text_raw = mainGame->ebJoinPass->getText();
+				std::wstring host_text = host_text_raw ? host_text_raw : L"";
+				std::wstring pass_text = pass_text_raw ? pass_text_raw : L"";
+				auto join_source = DuelClient::ResolveJoinSource(host_text.c_str(), pass_text.c_str());
+				DuelClient::PrepareConnectionMetadata(host_text, pass_text, join_source);
 				char hostname_tag[100];
 				wchar_t pstr[100];
 				BufferIO::CopyWideString(mainGame->ebJoinHost->getText(), pstr);
@@ -122,6 +128,10 @@ bool MenuHandler::OnEvent(const irr::SEvent& event) {
 					mainGame->env->addMessageBox(L"", dataManager.GetSysString(1402));
 					break;
 				}
+				std::wstring local_host_text = L"127.0.0.1";
+				const wchar_t* server_pass_raw = mainGame->ebServerPass->getText();
+				std::wstring server_pass = server_pass_raw ? server_pass_raw : L"";
+				DuelClient::PrepareConnectionMetadata(local_host_text, server_pass, JoinSource::LocalHost);
 				if(!DuelClient::StartClient(0x7f000001, mainGame->gameConf.serverport)) {
 					NetServer::StopServer();
 					soundManager.PlaySoundEffect(SOUND_INFO);

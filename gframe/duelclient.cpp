@@ -14,6 +14,7 @@
 #include <thread>
 #include <algorithm>
 #include <cctype>
+#include <cwchar>
 #include <vector>
 #include <string>
 #include <array>
@@ -419,6 +420,7 @@ std::mt19937 DuelClient::rnd;
 std::uniform_real_distribution<float> DuelClient::real_dist;
 std::atomic<int> DuelClient::pending_refresh_tasks{0};
 std::vector<std::wstring> DuelClient::host_passwords;
+std::vector<JoinSource> DuelClient::host_sources;
 
 bool DuelClient::is_refreshing = false;
 int DuelClient::match_kill = 0;
@@ -431,6 +433,39 @@ unsigned short DuelClient::temp_port = 0;
 unsigned short DuelClient::temp_ver = 0;
 bool DuelClient::try_needed = false;
 bool DuelClient::is_srvpro = false;
+
+namespace {
+struct ConnectionMetadata {
+	std::wstring host_text;
+	std::wstring pass_text;
+	JoinSource source{JoinSource::Manual};
+	unsigned int ip{0};
+	unsigned short port{0};
+	bool create_game{false};
+};
+
+ConnectionMetadata pending_connection_meta;
+bool has_pending_connection_meta = false;
+ConnectionMetadata active_connection_meta;
+bool has_active_connection_meta = false;
+
+bool IsPrivateIPv4(unsigned int host_order_ip) {
+	// host_order_ip is in host byte order (same as DuelClient::StartClient argument)
+	unsigned int octet1 = (host_order_ip >> 24) & 0xFF;
+	unsigned int octet2 = (host_order_ip >> 16) & 0xFF;
+	if(octet1 == 10)
+		return true;
+	if(octet1 == 172 && octet2 >= 16 && octet2 <= 31)
+		return true;
+	if(octet1 == 192 && octet2 == 168)
+		return true;
+	if(octet1 == 169 && octet2 == 254)
+		return true;
+	if(octet1 == 127)
+		return true;
+	return false;
+}
+}
 
 bool DuelClient::StartClient(unsigned int ip, unsigned short port, bool create_game) {
 	if(connect_state)
@@ -447,6 +482,17 @@ bool DuelClient::StartClient(unsigned int ip, unsigned short port, bool create_g
 	bufferevent_setcb(client_bev, ClientRead, nullptr, ClientEvent, (void*)create_game);
 	temp_ip = ip;
 	temp_port = port;
+	if(has_pending_connection_meta) {
+		pending_connection_meta.ip = ip;
+		pending_connection_meta.port = port;
+		pending_connection_meta.create_game = create_game;
+	} else {
+		pending_connection_meta = {};
+		pending_connection_meta.ip = ip;
+		pending_connection_meta.port = port;
+		pending_connection_meta.create_game = create_game;
+		has_pending_connection_meta = true;
+	}
 	if (bufferevent_socket_connect(client_bev, (sockaddr*)&sin, sizeof(sin)) < 0) {
 		bufferevent_free(client_bev);
 		event_base_free(client_base);
@@ -589,18 +635,24 @@ void DuelClient::ClientEvent(bufferevent* bev, short events, void* ctx) {
 				else if(!bot_mode && !mainGame->wLanWindow->isVisible())
 					mainGame->ShowElement(mainGame->wLanWindow);
 				soundManager.PlaySoundEffect(SOUND_INFO);
-				mainGame->env->addMessageBox(L"", dataManager.GetSysString(1400));
-				mainGame->gMutex.unlock();
-				if (auto_watch_mode) {
-					mainGame->actionSignal.Wait(2000);
-					mainGame->device->closeDevice();
-				}
-			} else if(connect_state == 0x7) {
-				if(!mainGame->dInfo.isStarted && !mainGame->is_building) {
-					mainGame->btnCreateHost->setEnabled(true);
-					mainGame->btnJoinHost->setEnabled(true);
-					mainGame->btnJoinCancel->setEnabled(true);
-					mainGame->btnStartBot->setEnabled(true);
+			mainGame->env->addMessageBox(L"", dataManager.GetSysString(1400));
+			mainGame->gMutex.unlock();
+			if (auto_watch_mode) {
+				mainGame->actionSignal.Wait(2000);
+				mainGame->device->closeDevice();
+			}
+		} else if(connect_state == 0x7) {
+#ifdef YGOPRO_USE_STEAM_SDK
+			if(has_active_connection_meta) {
+				mainGame->OnNetworkLeftRoom();
+				has_active_connection_meta = false;
+			}
+#endif
+			if(!mainGame->dInfo.isStarted && !mainGame->is_building) {
+				mainGame->btnCreateHost->setEnabled(true);
+				mainGame->btnJoinHost->setEnabled(true);
+				mainGame->btnJoinCancel->setEnabled(true);
+				mainGame->btnStartBot->setEnabled(true);
 					mainGame->btnBotCancel->setEnabled(true);
 					mainGame->gMutex.lock();
 					mainGame->HideElement(mainGame->wHostPrepare);
@@ -661,6 +713,10 @@ int DuelClient::ClientThread() {
 	client_bev = 0;
 	client_base = 0;
 	connect_state = 0;
+#ifdef YGOPRO_USE_STEAM_SDK
+	has_pending_connection_meta = false;
+	has_active_connection_meta = false;
+#endif
 	return 0;
 }
 void DuelClient::HandleSTOCPacketLan(unsigned char* data, int len) {
@@ -1032,6 +1088,27 @@ void DuelClient::HandleSTOCPacketLan(unsigned char* data, int len) {
 		mainGame->dInfo.start_lp = pkt->info.start_lp;
 		watching = 0;
 		connect_state |= 0x4;
+#ifdef YGOPRO_USE_STEAM_SDK
+		if(has_pending_connection_meta) {
+			active_connection_meta = pending_connection_meta;
+			has_pending_connection_meta = false;
+		} else {
+			active_connection_meta = {};
+		}
+		has_active_connection_meta = true;
+		bool is_private = IsPrivateIPv4(active_connection_meta.ip);
+		bool is_lan = active_connection_meta.create_game
+			|| active_connection_meta.source == JoinSource::LocalHost
+			|| active_connection_meta.source == JoinSource::LanBroadcast
+			|| (active_connection_meta.source == JoinSource::Manual && is_private);
+		bool is_dedicated = !is_lan && (active_connection_meta.source == JoinSource::RemoteServer
+			|| active_connection_meta.source == JoinSource::SRVPro
+			|| (active_connection_meta.source == JoinSource::Manual && !is_private));
+		mainGame->OnNetworkJoinedRoom(active_connection_meta.host_text, active_connection_meta.pass_text,
+			active_connection_meta.ip, active_connection_meta.port, is_dedicated);
+#else
+		has_pending_connection_meta = false;
+#endif
 		break;
 	}
 	case STOC_TYPE_CHANGE: {
@@ -4772,6 +4849,7 @@ void DuelClient::BeginRefreshHost() {
 	remotes.clear();
 	hosts.clear();
 	host_passwords.clear();
+	host_sources.clear();
 	auto remote_sources = BuildRemoteServerSources();
 	if(!remote_sources.empty()) {
 		pending_refresh_tasks.fetch_add(1);
@@ -4920,6 +4998,7 @@ void DuelClient::BroadcastReply(evutil_socket_t fd, short events, void * arg) {
 				pHP->port);
 			hosts.push_back(std::wstring(host_fulladdr));
 			host_passwords.push_back(L"");
+			host_sources.push_back(JoinSource::LanBroadcast);
 			std::wstring hoststr;
 			hoststr.append(L"[LAN][");
 			hoststr.append(deckManager.GetLFListName(pHP->host.lflist));
@@ -5198,6 +5277,7 @@ void DuelClient::FetchRemoteRoomList(const RemoteServerSource& source) {
 		for(size_t i = 0; i < display_entries.size(); ++i) {
 			hosts.push_back(join_entries[i]);
 			host_passwords.push_back(pass_entries[i]);
+			host_sources.push_back(JoinSource::RemoteServer);
 			mainGame->lstHostList->addItem(display_entries[i].c_str());
 		}
 		mainGame->gMutex.unlock();
@@ -5331,4 +5411,34 @@ HostResult DuelClient::ParseHost(char *hostname) {
 	result.port = 7911;
 	return result;
 }
+
+void DuelClient::PrepareConnectionMetadata(const std::wstring& host_text, const std::wstring& pass_text, JoinSource source) {
+	pending_connection_meta.host_text = host_text;
+	pending_connection_meta.pass_text = pass_text;
+	pending_connection_meta.source = source;
+	has_pending_connection_meta = true;
+}
+
+JoinSource DuelClient::ResolveJoinSource(const wchar_t* host_text, const wchar_t* pass_text) {
+	if(host_text) {
+		for(size_t i = 0; i < hosts.size(); ++i) {
+			if(i >= host_sources.size())
+				break;
+			if(!std::wcscmp(hosts[i].c_str(), host_text))
+				return host_sources[i];
+		}
+	}
+	if(is_srvpro && pass_text) {
+		for(const auto& room_name : hosts_srvpro) {
+			if(!std::wcscmp(room_name.c_str(), pass_text))
+				return JoinSource::SRVPro;
+		}
+	}
+	return JoinSource::Manual;
+}
+
+bool DuelClient::IsInRoom() {
+	return connect_state == 0x7;
+}
+
 }

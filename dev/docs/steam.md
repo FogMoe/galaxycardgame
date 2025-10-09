@@ -26,6 +26,10 @@
     - `Main Menu`（其余情况）。
 - 状态字符串会被转换为 `#Status_*` token，例如 `Main Menu` → `#Status_MAIN_MENU`、`In Room` → `#Status_IN_ROOM`。请在 Steamworks 后台对应配置 Enhanced Rich Presence 显示文案。
 - 游戏退出时调用 `SteamAPI_Shutdown()`，并清空本地状态缓存。
+- 专用服务器房间（远程房间）会额外在 Rich Presence 中写入 `connect` 字段，内容形如 `gcg://dedicated?host=<host>&port=<port>&pass=<pass>`，以便 Steam 好友通过系统菜单一键加入；局域网房间和本地服务器不会设置该字段，避免暴露内网地址。
+- 当收到 `GameRichPresenceJoinRequested_t` 回调时，客户端会解析上述 `connect` 字符串：
+  - 若当前未连接服务器，会直接填写目标地址/密码并发起连接；
+  - 若仍在房间中，则提示玩家先退出，待断开后会自动按队列依次加入。
 
 ### 成就系统
 
