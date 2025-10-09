@@ -17,6 +17,8 @@
 
 namespace ygo {
 
+static bool s_initialLanRefreshDone = false;
+
 void UpdateDeck() {
 	BufferIO::CopyWideString(mainGame->cbCategorySelect->getText(), mainGame->gameConf.lastcategory);
 	BufferIO::CopyWideString(mainGame->cbDeckSelect->getText(), mainGame->gameConf.lastdeck);
@@ -64,6 +66,10 @@ bool MenuHandler::OnEvent(const irr::SEvent& event) {
 				mainGame->btnJoinCancel->setEnabled(true);
 				mainGame->HideElement(mainGame->wMainMenu);
 				mainGame->ShowElement(mainGame->wLanWindow);
+				if(!s_initialLanRefreshDone) {
+					s_initialLanRefreshDone = true;
+					DuelClient::BeginRefreshHost();
+				}
 				break;
 			}
 			case BUTTON_JOIN_HOST: {
