@@ -3,7 +3,9 @@
 #include "single_duel.h"
 #include "tag_duel.h"
 #include "deck_manager.h"
+#include "steam_session.h"
 #include <thread>
+#include <future>
 
 namespace ygo {
 std::unordered_map<bufferevent*, DuelPlayer> NetServer::users;
@@ -170,6 +172,7 @@ int NetServer::ServerThread() {
 		delete duel_mode;
 	}
 	duel_mode = 0;
+	steam::OnGameClosed();
 	event_base_free(net_evbase);
 	net_evbase = 0;
 	return 0;
@@ -177,11 +180,55 @@ int NetServer::ServerThread() {
 void NetServer::DisconnectPlayer(DuelPlayer* dp) {
 	auto bit = users.find(dp->bev);
 	if(bit != users.end()) {
+		steam::OnServerConnectionClosed(dp->bev);
 		bufferevent_flush(dp->bev, EV_WRITE, BEV_FLUSH);
 		bufferevent_disable(dp->bev, EV_READ);
 		bufferevent_free(dp->bev);
 		users.erase(bit);
 	}
+}
+
+namespace {
+struct SteamAttachTask {
+	evutil_socket_t fd{};
+	std::promise<bufferevent*> promise;
+};
+
+void AttachSteamConnectionOnServerThread(evutil_socket_t, short, void* ctx) {
+	auto* task = static_cast<SteamAttachTask*>(ctx);
+	bufferevent* bev = nullptr;
+	if(NetServer::GetEventBase()) {
+		bev = bufferevent_socket_new(NetServer::GetEventBase(), task->fd, BEV_OPT_CLOSE_ON_FREE);
+		if(bev) {
+			DuelPlayer dp{};
+			dp.game = nullptr;
+			dp.type = 0xff;
+			dp.state = 0;
+			dp.bev = bev;
+			NetServer::GetUsers().emplace(bev, dp);
+			bufferevent_setcb(bev, NetServer::ServerEchoRead, nullptr, NetServer::ServerEchoEvent, nullptr);
+			bufferevent_enable(bev, EV_READ);
+		}
+	}
+	task->promise.set_value(bev);
+	delete task;
+}
+}
+
+bufferevent* NetServer::AttachSteamConnection(evutil_socket_t fd) {
+	event_base* base = GetEventBase();
+	if(!base)
+		return nullptr;
+	auto* task = new SteamAttachTask();
+	task->fd = fd;
+	auto future = task->promise.get_future();
+	timeval tv{0, 0};
+	if(event_base_once(base, -1, EV_TIMEOUT, AttachSteamConnectionOnServerThread, task, &tv) != 0) {
+		task->promise.set_value(nullptr);
+		delete task;
+		return nullptr;
+	}
+	return future.get();
 }
 void NetServer::HandleCTOSPacket(DuelPlayer* dp, unsigned char* data, int len) {
 	auto pdata = data;
@@ -312,6 +359,7 @@ void NetServer::HandleCTOSPacket(DuelPlayer* dp, unsigned char* data, int len) {
 		BufferIO::CopyCharArray(pkt->pass, duel_mode->pass);
 		duel_mode->JoinGame(dp, 0, true);
 		StartBroadcast();
+		steam::OnGameCreated(duel_mode->host_info, duel_mode->name, duel_mode->pass);
 		break;
 	}
 	case CTOS_JOIN_GAME: {

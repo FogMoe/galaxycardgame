@@ -8,6 +8,10 @@
 namespace ygo {
 
 class NetServer {
+public:
+	static event_base* GetEventBase();
+	static std::unordered_map<bufferevent*, DuelPlayer>& GetUsers();
+
 private:
 	static std::unordered_map<bufferevent*, DuelPlayer> users;
 	static unsigned short server_port;
@@ -31,6 +35,7 @@ public:
 	static void ServerEchoEvent(bufferevent* bev, short events, void* ctx);
 	static int ServerThread();
 	static void DisconnectPlayer(DuelPlayer* dp);
+	static bufferevent* AttachSteamConnection(evutil_socket_t fd);
 	static void HandleCTOSPacket(DuelPlayer* dp, unsigned char* data, int len);
 	static size_t CreateChatPacket(unsigned char* src, int src_size, unsigned char* dst, uint16_t dst_player_type);
 	static void SendPacketToPlayer(DuelPlayer* dp, unsigned char proto) {
@@ -68,6 +73,14 @@ public:
 			bufferevent_write(dp->bev, net_server_write, last_sent);
 	}
 };
+
+inline event_base* NetServer::GetEventBase() {
+	return net_evbase;
+}
+
+inline std::unordered_map<bufferevent*, DuelPlayer>& NetServer::GetUsers() {
+	return users;
+}
 
 }
 

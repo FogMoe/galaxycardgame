@@ -8,6 +8,7 @@
 #include "game.h"
 #include "deck_manager.h"
 #include "replay.h"
+#include "steam_session.h"
 #ifdef _WIN32
 #include <Windns.h>
 #endif
@@ -425,6 +426,7 @@ int DuelClient::match_kill = 0;
 std::vector<std::wstring> DuelClient::hosts;
 std::vector<std::wstring> DuelClient::hosts_srvpro;
 std::set<std::pair<unsigned int, unsigned short>> DuelClient::remotes;
+bool DuelClient::using_steam_transport = false;
 event* DuelClient::resp_event = 0;
 unsigned int DuelClient::temp_ip = 0;
 unsigned short DuelClient::temp_port = 0;
@@ -464,6 +466,34 @@ bool DuelClient::StartClient(unsigned int ip, unsigned short port, bool create_g
 	std::thread(ClientThread).detach();
 	return true;
 }
+
+bool DuelClient::StartSteamClient(evutil_socket_t fd) {
+	if(connect_state)
+		return false;
+	client_base = event_base_new();
+	if(!client_base)
+		return false;
+	client_bev = bufferevent_socket_new(client_base, fd, BEV_OPT_CLOSE_ON_FREE);
+	if(!client_bev) {
+		event_base_free(client_base);
+		client_base = 0;
+		return false;
+	}
+	bufferevent_setcb(client_bev, ClientRead, nullptr, ClientEvent, (void*)false);
+	connect_state = 0x1;
+	using_steam_transport = true;
+	temp_ip = 0;
+	temp_port = 0;
+	temp_ver = 0;
+	std::thread(ClientThread).detach();
+	ClientEvent(client_bev, BEV_EVENT_CONNECTED, (void*)false);
+	return true;
+}
+
+void DuelClient::OnSteamTransportClosed() {
+	if(using_steam_transport && client_base)
+		event_base_loopbreak(client_base);
+}
 void DuelClient::ConnectTimeout(evutil_socket_t fd, short events, void* arg) {
 	if(connect_state == 0x7)
 		return;
@@ -491,6 +521,15 @@ void DuelClient::StopClient(bool is_exiting) {
 	is_closing = is_exiting;
 	if(!is_closing) {
 
+	}
+	if(using_steam_transport) {
+		steam::OnClientConnectionClosed();
+		using_steam_transport = false;
+	} else {
+#ifdef YGOPRO_USE_STEAM_SDK
+		if(steam::IsAvailable())
+			steam::UpdateConnectString(L"");
+#endif
 	}
 	event_base_loopbreak(client_base);
 }
@@ -661,6 +700,7 @@ int DuelClient::ClientThread() {
 	client_bev = 0;
 	client_base = 0;
 	connect_state = 0;
+	using_steam_transport = false;
 	return 0;
 }
 void DuelClient::HandleSTOCPacketLan(unsigned char* data, int len) {
@@ -4775,6 +4815,26 @@ void DuelClient::BeginRefreshHost() {
 		pending_refresh_tasks.fetch_add(1);
 		std::thread(FetchRemoteRoomsThread, std::move(remote_sources)).detach();
 	}
+#ifdef YGOPRO_USE_STEAM_SDK
+	if(steam::IsAvailable()) {
+		pending_refresh_tasks.fetch_add(1);
+		steam::RequestLobbyList([](const std::vector<std::wstring>& display,
+		                           const std::vector<std::wstring>& join,
+		                           const std::vector<std::wstring>& pass) {
+			mainGame->gMutex.lock();
+			for(size_t i = 0; i < display.size(); ++i) {
+				mainGame->lstHostList->addItem(display[i].c_str());
+				DuelClient::hosts.push_back(join[i]);
+				if(i < pass.size())
+					DuelClient::host_passwords.push_back(pass[i]);
+				else
+					DuelClient::host_passwords.emplace_back();
+			}
+			mainGame->gMutex.unlock();
+			DuelClient::RefreshSourceCompleted();
+		});
+	}
+#endif
 	event_base* broadev = event_base_new();
 	if(!broadev) {
 		if(pending_refresh_tasks.load() == 0) {

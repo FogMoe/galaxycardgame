@@ -18,6 +18,7 @@
 #include <cctype>
 #ifdef YGOPRO_USE_STEAM_SDK
 #include <steam/steam_api.h>
+#include "steam_session.h"
 #endif
 
 unsigned short PRO_VERSION = 0x1001;
@@ -1202,6 +1203,7 @@ void Game::MainLoop() {
 				presence = "Main Menu";
 			UpdateSteamRichPresence(presence);
 			SteamAPI_RunCallbacks();
+			steam::Tick();
 		}
 #endif
 		if(closeSignal.Wait(1))
@@ -1237,6 +1239,7 @@ void Game::MainLoop() {
 		SteamAPI_Shutdown();
 		steam_sdk_available = false;
 		steam_presence_state.clear();
+		steam::Shutdown();
 	}
 #endif
 	device->drop();

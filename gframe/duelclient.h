@@ -85,6 +85,7 @@ private:
 	static int match_kill;
 	static event* resp_event;
 	static std::set<std::pair<unsigned int, unsigned short>> remotes;
+	static bool using_steam_transport;
 	static std::vector<RemoteServerSource> BuildRemoteServerSources();
 	static void FetchRemoteRoomsThread(std::vector<RemoteServerSource> sources);
 	static void FetchRemoteRoomList(const RemoteServerSource& source);
@@ -98,8 +99,10 @@ public:
 	static bool try_needed;
 	static unsigned char selftype;
 	static bool StartClient(unsigned int ip, unsigned short port, bool create_game = true);
+	static bool StartSteamClient(evutil_socket_t fd);
 	static void ConnectTimeout(evutil_socket_t fd, short events, void* arg);
 	static void StopClient(bool is_exiting = false);
+	static void OnSteamTransportClosed();
 	static void ClientRead(bufferevent* bev, void* ctx);
 	static void ClientEvent(bufferevent* bev, short events, void* ctx);
 	static int ClientThread();

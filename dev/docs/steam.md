@@ -27,6 +27,25 @@
 - 状态字符串会被转换为 `#Status_*` token，例如 `Main Menu` → `#Status_MAIN_MENU`、`In Room` → `#Status_IN_ROOM`。请在 Steamworks 后台对应配置 Enhanced Rich Presence 显示文案。
 - 游戏退出时调用 `SteamAPI_Shutdown()`，并清空本地状态缓存。
 
+## 多人联机约定
+
+- **房主创建房间**  
+  - 当玩家在 LAN 面板点击“创建房间”并成功 `CTOS_CREATE_GAME` 后，服务器会自动：
+    - 启动 UDP 广播（原 LAN 机制）；
+    - 创建 Steam Lobby（`k_ELobbyTypePublic`，容量 4），并同步房间信息到 Lobby Metadata（名称、规则、生命值、是否有密码等）；
+    - 调用 `SetLobbyGameServer` 让 Steam 好友列表可直接显示“加入房间”。
+- **房间关闭**：`NetServer::StopServer()` 会统一调用 `steam::OnGameClosed()`，确保 Lobby 被销毁，不会残留在好友列表。
+- **房间列表刷新**：  
+  - 本地 `RefreshHost` 仍会查询局域网与官方服务器列表；  
+  - 若 Steam 可用，会额外发起 `RequestLobbyList()`，将筛选后的 Lobby（版本号一致）追加到同一列表中，展示格式为 `[Steam][禁限表][规则][模式] 房间名`，与 LAN 条目保持一致；  
+  - 选择 Steam 条目时，`ebJoinHost` 会获得描述符 `steam:lobby:<LobbyID>`，用于后续连接。
+- **加入逻辑**：  
+  - 传统项（LAN / 专服）依旧走直连；  
+  - 当检测到 `steam:lobby:` 描述符时，按钮会调用 `steam::JoinByDescriptor()`，自动执行 `ISteamMatchmaking::JoinLobby`；  
+  - 后续的 P2P / Relay 传输由 Steam NetworkingSockets 驱动：房主监听 `CreateListenSocketP2P`，客户端使用 `ConnectP2P`，两端通过本地 socketpair 将现有 TCP 逻辑与 Steam 通道桥接（libevent `bufferevent` ←→ Steam 数据）。
+- **好友邀请**：模块已监听 `GameLobbyJoinRequested_t`，玩家可通过 Steam 好友列表直接加入或接受邀请；Lobby 关闭后会立即从本地房间列表移除，避免残留条目。
+  - 当检测到本地直连关闭（离开 LAN / 专服房间）时，会主动清空 Rich Presence `connect` 字段，避免好友列表出现过期的邀请入口。 
+
 ## 编译配置
 
 - Premake 默认会为 VS 工程禁用 Steam SDK 头文件带来的 `C4828` 警告。

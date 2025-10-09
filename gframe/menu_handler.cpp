@@ -9,6 +9,7 @@
 #include "image_manager.h"
 #include "sound_manager.h"
 #include "game.h"
+#include "steam_session.h"
 #ifdef _WIN32
 #include <shellapi.h>
 #else
@@ -72,6 +73,18 @@ bool MenuHandler::OnEvent(const irr::SEvent& event) {
 				char hostname_tag[100];
 				wchar_t pstr[100];
 				BufferIO::CopyWideString(mainGame->ebJoinHost->getText(), pstr);
+#ifdef YGOPRO_USE_STEAM_SDK
+				if(steam::IsAvailable()) {
+					std::wstring descriptor(pstr);
+					if(steam::JoinByDescriptor(descriptor)) {
+						mainGame->btnCreateHost->setEnabled(false);
+						mainGame->btnJoinHost->setEnabled(false);
+						mainGame->btnJoinCancel->setEnabled(false);
+						break;
+					}
+					steam::UpdateConnectString(descriptor);
+				}
+#endif
 				BufferIO::EncodeUTF8(pstr, hostname_tag);
 				HostResult remote = DuelClient::ParseHost(hostname_tag);
 				if(!remote.isValid()) {
@@ -98,6 +111,10 @@ bool MenuHandler::OnEvent(const irr::SEvent& event) {
 				mainGame->HideElement(mainGame->wLanWindow);
 				mainGame->HideElement(mainGame->wServerList);
 				mainGame->ShowElement(mainGame->wMainMenu);
+#ifdef YGOPRO_USE_STEAM_SDK
+				if(steam::IsAvailable())
+					steam::UpdateConnectString(L"");
+#endif
 				if(exit_on_return)
 					mainGame->device->closeDevice();
 				break;
@@ -518,21 +535,29 @@ bool MenuHandler::OnEvent(const irr::SEvent& event) {
 		}
 		case irr::gui::EGET_LISTBOX_CHANGED: {
 			switch(id) {
-			case LISTBOX_LAN_HOST: {
-				int sel = mainGame->lstHostList->getSelected();
-				if(sel == -1)
-					break;
-				if(DuelClient::is_srvpro) {
-					mainGame->ebJoinPass->setText(DuelClient::hosts_srvpro[sel].c_str());
+				case LISTBOX_LAN_HOST: {
+					int sel = mainGame->lstHostList->getSelected();
+					if(sel == -1)
+						break;
+					if(DuelClient::is_srvpro) {
+						mainGame->ebJoinPass->setText(DuelClient::hosts_srvpro[sel].c_str());
+#ifdef YGOPRO_USE_STEAM_SDK
+						if(steam::IsAvailable())
+							steam::UpdateConnectString(mainGame->ebJoinHost->getText());
+#endif
+						break;
+					}
+					mainGame->ebJoinHost->setText(DuelClient::hosts[sel].c_str());
+					if(sel < static_cast<int>(DuelClient::host_passwords.size()))
+						mainGame->ebJoinPass->setText(DuelClient::host_passwords[sel].c_str());
+					else
+						mainGame->ebJoinPass->setText(L"");
+#ifdef YGOPRO_USE_STEAM_SDK
+					if(steam::IsAvailable())
+						steam::UpdateConnectString(DuelClient::hosts[sel]);
+#endif
 					break;
 				}
-				mainGame->ebJoinHost->setText(DuelClient::hosts[sel].c_str());
-				if(sel < static_cast<int>(DuelClient::host_passwords.size()))
-					mainGame->ebJoinPass->setText(DuelClient::host_passwords[sel].c_str());
-				else
-					mainGame->ebJoinPass->setText(L"");
-				break;
-			}
 			case LISTBOX_REPLAY_LIST: {
 				int sel = mainGame->lstReplayList->getSelected();
 				if(sel < 0)
