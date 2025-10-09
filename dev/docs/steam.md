@@ -27,6 +27,17 @@
 - 状态字符串会被转换为 `#Status_*` token，例如 `Main Menu` → `#Status_MAIN_MENU`、`In Room` → `#Status_IN_ROOM`。请在 Steamworks 后台对应配置 Enhanced Rich Presence 显示文案。
 - 游戏退出时调用 `SteamAPI_Shutdown()`，并清空本地状态缓存。
 
+### 成就系统
+
+- 成就逻辑集中在 `Game::TryUnlockPendingSteamAchievements()` 中维护，所有触发入口只需设置布尔状态并调用该函数即可。
+- 当前内置成就：
+  - `ACH_FIRST_LAUNCH`：首次从 Steam 启动游戏，在 `SteamAPI_Init()` 成功后标记。
+  - `ACH_FIRST_DECK_BUILD`：首次从卡组编辑器返回主菜单，在 `Game::OnDeckBuilderClosed()` 中标记。
+  - `ACH_FIRST_VICTORY`：首次线上对局获胜，在 `Game::OnLocalPlayerWin()` 中标记，仅对参战玩家生效（旁观及录像不会触发）。
+- 每个触发入口都会先检查 `steam_sdk_available`，并在 Steam 服务不可用时静默跳过，确保无 SDK / 未登录情况下仍能正常游玩。
+- `TryUnlockPendingSteamAchievements()` 会重复查询 SteamUserStats，直到 Steam 客户端同步完成为止；调用是幂等的，可以安全地放在主循环。
+- 新增成就时，保持上述模式：添加状态位、在事件入口设置、在统一函数中追加 `try_unlock("<ACH_ID>", flag)`，并在后台配置成就属性。
+
 ## 编译配置
 
 - Premake 默认会为 VS 工程禁用 Steam SDK 头文件带来的 `C4828` 警告。

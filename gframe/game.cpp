@@ -149,6 +149,8 @@ bool Game::Initialize() {
 		} else {
 			steam_sdk_available = true;
 			UpdateSteamRichPresence("Main Menu");
+			steam_first_launch_pending = true;
+			TryUnlockPendingSteamAchievements();
 		}
 	}
 #endif
@@ -1200,6 +1202,7 @@ void Game::MainLoop() {
 				presence = "Deck Builder";
 			else
 				presence = "Main Menu";
+			TryUnlockPendingSteamAchievements();
 			UpdateSteamRichPresence(presence);
 			SteamAPI_RunCallbacks();
 		}
@@ -1237,6 +1240,9 @@ void Game::MainLoop() {
 		SteamAPI_Shutdown();
 		steam_sdk_available = false;
 		steam_presence_state.clear();
+		steam_first_launch_pending = false;
+		steam_first_deck_build_pending = false;
+		steam_first_victory_pending = false;
 	}
 #endif
 	device->drop();
@@ -2182,6 +2188,31 @@ void Game::ErrorLog(const char* msg) {
 	std::fclose(fp);
 }
 #ifdef YGOPRO_USE_STEAM_SDK
+void Game::TryUnlockPendingSteamAchievements() {
+	if(!steam_sdk_available)
+		return;
+	ISteamUserStats* user_stats = SteamUserStats();
+	if(!user_stats)
+		return;
+	auto try_unlock = [user_stats](const char* achievement_id, bool& pending_flag) {
+		if(!pending_flag)
+			return;
+		bool achieved = false;
+		if(!user_stats->GetAchievement(achievement_id, &achieved))
+			return;
+		if(achieved) {
+			pending_flag = false;
+			return;
+		}
+		if(user_stats->SetAchievement(achievement_id)) {
+			user_stats->StoreStats();
+			pending_flag = false;
+		}
+	};
+	try_unlock("ACH_FIRST_LAUNCH", steam_first_launch_pending);
+	try_unlock("ACH_FIRST_DECK_BUILD", steam_first_deck_build_pending);
+	try_unlock("ACH_FIRST_VICTORY", steam_first_victory_pending);
+}
 void Game::UpdateSteamRichPresence(const char* status) {
 	if(!steam_sdk_available)
 		return;
@@ -2207,6 +2238,22 @@ void Game::UpdateSteamRichPresence(const char* status) {
 	}
 }
 #endif
+void Game::OnDeckBuilderClosed() {
+#ifdef YGOPRO_USE_STEAM_SDK
+	if(steam_sdk_available) {
+		steam_first_deck_build_pending = true;
+		TryUnlockPendingSteamAchievements();
+	}
+#endif
+}
+void Game::OnLocalPlayerWin() {
+#ifdef YGOPRO_USE_STEAM_SDK
+	if(steam_sdk_available) {
+		steam_first_victory_pending = true;
+		TryUnlockPendingSteamAchievements();
+	}
+#endif
+}
 void Game::initUtils() {
 	//user files
 	FileSystem::MakeDir("replay");

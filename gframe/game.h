@@ -242,7 +242,10 @@ public:
 	void CloseDuelWindow();
 #ifdef YGOPRO_USE_STEAM_SDK
 	void UpdateSteamRichPresence(const char* status);
+	void TryUnlockPendingSteamAchievements();
 #endif
+	void OnDeckBuilderClosed();
+	void OnLocalPlayerWin();
 
 	int LocalPlayer(int player) const;
 	int OppositePlayer(int player);
@@ -340,6 +343,9 @@ public:
 #ifdef YGOPRO_USE_STEAM_SDK
 	bool steam_sdk_available{};
 	std::string steam_presence_state;
+	bool steam_first_launch_pending{};
+	bool steam_first_deck_build_pending{};
+	bool steam_first_victory_pending{};
 #endif
 
 	bool is_building{};

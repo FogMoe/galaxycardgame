@@ -108,6 +108,7 @@ void DeckBuilder::Initialize() {
 }
 void DeckBuilder::Terminate() {
 	mainGame->is_building = false;
+	mainGame->OnDeckBuilderClosed();
 	mainGame->ClearCardInfo();
 	mainGame->wDeckEdit->setVisible(false);
 	mainGame->wCategories->setVisible(false);

@@ -1770,6 +1770,8 @@ bool DuelClient::ClientAnalyze(unsigned char* msg, int len) {
 			if(mainGame->LocalPlayer(player) == 0) {
 				mainGame->showcardcode = 1;
 				myswprintf(vic_name, L"%ls", mainGame->dInfo.clientname);
+				if(DuelClient::selftype < 4 && !mainGame->dInfo.isReplay)
+					mainGame->OnLocalPlayerWin();
 			}
 			else {
 				mainGame->showcardcode = 2;
