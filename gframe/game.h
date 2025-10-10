@@ -73,6 +73,10 @@ struct Config {
 	wchar_t lastdeck[256]{};
 	wchar_t textfont[256]{};
 	wchar_t numfont[256]{};
+	wchar_t textfont_en_us[256]{};
+	unsigned char textfontsize_en_us{ 0 };
+	wchar_t textfont_zh_cn[256]{};
+	unsigned char textfontsize_zh_cn{ 0 };
 	wchar_t bot_deck_path[256]{};
 	wchar_t locale[64];
 	//settings
@@ -428,6 +432,8 @@ public:
 	irr::gui::IGUICheckBox* chkEnableMusic;
 	irr::gui::IGUIScrollBar* scrSoundVolume;
 	irr::gui::IGUIScrollBar* scrMusicVolume;
+	irr::gui::IGUIScrollBar* scrTextSize;
+	irr::gui::IGUIStaticText* stTextSizeValue;
 	irr::gui::IGUICheckBox* chkMusicMode;
 	irr::gui::IGUIButton* btnWinResizeS;
 	irr::gui::IGUIButton* btnWinResizeM;
@@ -956,6 +962,7 @@ extern Game* mainGame;
 #define BUTTON_SERVER_LIST			392
 #define LISTBOX_SERVER_LIST			393
 #define BUTTON_SERVER_RETURN		394
+#define SCROLL_TEXTSIZE				395
 
 #define TEXTURE_DUEL				0
 #define TEXTURE_DECK				1

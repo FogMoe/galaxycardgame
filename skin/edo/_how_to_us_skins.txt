@@ -1,4 +1,4 @@
-Open [Your ygopro folder]\system.conf with a text editor.
+Open [Your gcg folder]\system.conf with a text editor.
 Change the following settings:
 use_d3d = 1
 use_skin = 1

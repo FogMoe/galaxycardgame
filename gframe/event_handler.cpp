@@ -1607,7 +1607,7 @@ bool ClientField::OnEvent(const irr::SEvent& event) {
 								myswprintf(formatBuffer, L"\n%ls/%ls", mcard->atkstring, mcard->defstring);
 								str.append(formatBuffer);
 								if(!(mcard->type & TYPE_LINK)) {
-									const wchar_t* form = L"补给";
+									const wchar_t* form = dataManager.GetSysString(1626);
 									if (mcard->rank) form = L"阶级";
 									myswprintf(formatBuffer, L"\n%ls%d", form, (mcard->level ? mcard->level : mcard->rank));
 									str.append(formatBuffer);
@@ -2056,6 +2056,31 @@ bool ClientField::OnCommonEvent(const irr::SEvent& event) {
 				mainGame->gameConf.music_volume = (double)mainGame->scrMusicVolume->getPos() / 100;
 				soundManager.SetSoundVolume(mainGame->gameConf.sound_volume);
 				soundManager.SetMusicVolume(mainGame->gameConf.music_volume);
+				return true;
+				break;
+			}
+			case SCROLL_TEXTSIZE: {
+				int newSize = mainGame->scrTextSize->getPos();
+				if(newSize < 10)
+					newSize = 10;
+				else if(newSize > 20)
+					newSize = 20;
+				if(mainGame->scrTextSize->getPos() != newSize)
+					mainGame->scrTextSize->setPos(newSize);
+				wchar_t buf[8]{};
+				myswprintf(buf, L"%d", newSize);
+				if(mainGame->stTextSizeValue)
+					mainGame->stTextSizeValue->setText(buf);
+				mainGame->gameConf.textfontsize = (unsigned char)newSize;
+				if(mainGame->gameConf.locale && wcslen(mainGame->gameConf.locale) > 0) {
+					if(!std::wcscmp(mainGame->gameConf.locale, L"zh-CN"))
+						mainGame->gameConf.textfontsize_zh_cn = (unsigned char)newSize;
+					else if(!std::wcscmp(mainGame->gameConf.locale, L"en-US"))
+						mainGame->gameConf.textfontsize_en_us = (unsigned char)newSize;
+				}
+				mainGame->SaveConfig();
+				mainGame->SetStaticText(mainGame->stMessage, 310, mainGame->guiFont, dataManager.GetSysString(1639));
+				mainGame->PopupElement(mainGame->wMessage);
 				return true;
 				break;
 			}

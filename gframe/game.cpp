@@ -15,6 +15,8 @@
 #include <thread>
 #include <set>
 #include <cstring>
+#include <algorithm>
+#include <cwchar>
 #include <cctype>
 #ifdef YGOPRO_USE_STEAM_SDK
 #include <steam/steam_api.h>
@@ -414,11 +416,11 @@ bool Game::Initialize() {
 	btnPhaseStatus->setIsPushButton(true);
 	btnPhaseStatus->setPressed(true);
 	btnPhaseStatus->setVisible(false);
-	btnBP = env->addButton(irr::core::rect<irr::s32>(160, 0, 210, 20), wPhase, BUTTON_BP, L"交战");
+	btnBP = env->addButton(irr::core::rect<irr::s32>(160, 0, 210, 20), wPhase, BUTTON_BP, dataManager.GetSysString(1629));
 	btnBP->setVisible(false);
-	btnM2 = env->addButton(irr::core::rect<irr::s32>(160, 0, 210, 20), wPhase, BUTTON_M2, L"整备");
+	btnM2 = env->addButton(irr::core::rect<irr::s32>(160, 0, 210, 20), wPhase, BUTTON_M2, dataManager.GetSysString(1630));
 	btnM2->setVisible(false);
-	btnEP = env->addButton(irr::core::rect<irr::s32>(320, 0, 370, 20), wPhase, BUTTON_EP, L"休整");
+	btnEP = env->addButton(irr::core::rect<irr::s32>(320, 0, 370, 20), wPhase, BUTTON_EP, dataManager.GetSysString(1631));
 	btnEP->setVisible(false);
 	//tab
 	wInfos = env->addTabControl(irr::core::rect<irr::s32>(1, 275, 301, 639), 0, true);
@@ -563,10 +565,23 @@ bool Game::Initialize() {
 	chkEnablePScale = env->addCheckBox(false, irr::core::rect<irr::s32>(posX, posY, posX + 260, posY + 25), tabSystem, -1, dataManager.GetSysString(1269));
 	chkEnablePScale->setChecked(gameConf.chkEnablePScale != 0);
 	chkEnablePScale->setVisible(false); // 隐藏"数字灵摆图片"选择框
-	env->addStaticText(dataManager.GetSysString(1267), irr::core::rect<irr::s32>(posX + 23, posY + 3, posX + 160, posY + 28), false, false, tabSystem);
-	cbLocale = env->addComboBox(irr::core::rect<irr::s32>(posX + 150, posY, posX + 250, posY + 21), tabSystem, COMBOBOX_LOCALE);
-	RefreshLocales();
-	elmTabSystemLast = cbLocale;
+		env->addStaticText(dataManager.GetSysString(1267), irr::core::rect<irr::s32>(posX + 23, posY + 3, posX + 160, posY + 28), false, false, tabSystem);
+		cbLocale = env->addComboBox(irr::core::rect<irr::s32>(posX + 150, posY, posX + 250, posY + 21), tabSystem, COMBOBOX_LOCALE);
+		RefreshLocales();
+		elmTabSystemLast = cbLocale;
+		posY += 30;
+		env->addStaticText(dataManager.GetSysString(1638), irr::core::rect<irr::s32>(posX + 23, posY + 3, posX + 160, posY + 28), false, false, tabSystem);
+		scrTextSize = env->addScrollBar(true, irr::core::rect<irr::s32>(posX + 150, posY + 4, posX + 250, posY + 21), tabSystem, SCROLL_TEXTSIZE);
+		scrTextSize->setMin(10);
+		scrTextSize->setMax(20);
+		scrTextSize->setSmallStep(1);
+		scrTextSize->setLargeStep(1);
+		int initialTextSize = std::min(20, std::max(10, static_cast<int>(gameConf.textfontsize)));
+		scrTextSize->setPos(initialTextSize);
+		wchar_t textSizeBuf[8]{};
+		myswprintf(textSizeBuf, L"%d", initialTextSize);
+		stTextSizeValue = env->addStaticText(textSizeBuf, irr::core::rect<irr::s32>(posX + 260, posY + 3, posX + 300, posY + 28), false, false, tabSystem);
+		elmTabSystemLast = scrTextSize;
 	//
 	wHand = env->addWindow(irr::core::rect<irr::s32>(500, 450, 825, 605), false, L"");
 	wHand->getCloseButton()->setVisible(false);
@@ -1755,6 +1770,24 @@ bool Game::LoadConfigFromFile(const char* file) {
 					gameConf.textfontsize = fontsize;
 				*last_space = 0;
 				BufferIO::DecodeUTF8(valbuf, gameConf.textfont);
+			} else if (!std::strcmp(strbuf, "textfont_en-US")) {
+				char* last_space = std::strrchr(valbuf, ' ');
+				if (last_space == nullptr)
+					continue;
+				int fontsize = std::strtol(last_space + 1, nullptr, 10);
+				if (fontsize > 0)
+					gameConf.textfontsize_en_us = fontsize;
+				*last_space = 0;
+				BufferIO::DecodeUTF8(valbuf, gameConf.textfont_en_us);
+			} else if (!std::strcmp(strbuf, "textfont_zh-CN")) {
+				char* last_space = std::strrchr(valbuf, ' ');
+				if (last_space == nullptr)
+					continue;
+				int fontsize = std::strtol(last_space + 1, nullptr, 10);
+				if (fontsize > 0)
+					gameConf.textfontsize_zh_cn = fontsize;
+				*last_space = 0;
+				BufferIO::DecodeUTF8(valbuf, gameConf.textfont_zh_cn);
 			} else if (!std::strcmp(strbuf, "numfont")) {
 				BufferIO::DecodeUTF8(valbuf, gameConf.numfont);
 			} else if (!std::strcmp(strbuf, "nickname")) {
@@ -1789,6 +1822,10 @@ void Game::LoadConfig() {
 	gameConf.lastdeck[0] = 0;
 	gameConf.numfont[0] = 0;
 	gameConf.textfont[0] = 0;
+	gameConf.textfont_en_us[0] = 0;
+	gameConf.textfontsize_en_us = 0;
+	gameConf.textfont_zh_cn[0] = 0;
+	gameConf.textfontsize_zh_cn = 0;
 	gameConf.lasthost[0] = 0;
 	gameConf.roompass[0] = 0;
 	//settings
@@ -1895,6 +1932,24 @@ void Game::LoadConfig() {
 		//SaveConfig();
 #endif
 	}
+	auto apply_locale_font = [&](const wchar_t* font_path, unsigned char fontsize) {
+		if(font_path && font_path[0]) {
+			BufferIO::CopyWideString(font_path, gameConf.textfont);
+			if(fontsize > 0)
+				gameConf.textfontsize = fontsize;
+		}
+	};
+	if(gameConf.locale && wcslen(gameConf.locale) > 0) {
+		if(!std::wcscmp(gameConf.locale, L"zh-CN")) {
+			apply_locale_font(gameConf.textfont_zh_cn, gameConf.textfontsize_zh_cn);
+		} else if(!std::wcscmp(gameConf.locale, L"en-US")) {
+			apply_locale_font(gameConf.textfont_en_us, gameConf.textfontsize_en_us);
+		}
+	}
+	if(gameConf.textfontsize < 10)
+		gameConf.textfontsize = 10;
+	else if(gameConf.textfontsize > 20)
+		gameConf.textfontsize = 20;
 }
 void Game::SaveConfig() {
 #ifdef YGOPRO_COMPAT_MYCARD
@@ -1923,6 +1978,14 @@ void Game::SaveConfig() {
 	std::fprintf(fp, "lastdeck = %s\n", linebuf);
 	BufferIO::EncodeUTF8(gameConf.textfont, linebuf);
 	std::fprintf(fp, "textfont = %s %d\n", linebuf, gameConf.textfontsize);
+	if(gameConf.textfont_en_us[0]) {
+		BufferIO::EncodeUTF8(gameConf.textfont_en_us, linebuf);
+		std::fprintf(fp, "textfont_en-US = %s %d\n", linebuf, gameConf.textfontsize_en_us ? gameConf.textfontsize_en_us : gameConf.textfontsize);
+	}
+	if(gameConf.textfont_zh_cn[0]) {
+		BufferIO::EncodeUTF8(gameConf.textfont_zh_cn, linebuf);
+		std::fprintf(fp, "textfont_zh-CN = %s %d\n", linebuf, gameConf.textfontsize_zh_cn ? gameConf.textfontsize_zh_cn : gameConf.textfontsize);
+	}
 	BufferIO::EncodeUTF8(gameConf.numfont, linebuf);
 	std::fprintf(fp, "numfont = %s\n", linebuf);
 	std::fprintf(fp, "serverport = %d\n", gameConf.serverport);
@@ -2033,7 +2096,7 @@ void Game::ShowCardInfo(int code, bool resize) {
 		irr::core::dimension2d<unsigned int> dtxt = guiFont->getDimension(formatBuffer);
 		if(dtxt.Width > (300 * xScale - 13) - 15)
 			offset_info = 15;
-		const wchar_t* form = L"补给";
+			const wchar_t* form = dataManager.GetSysString(1626);
 		wchar_t adBuffer[64]{};
 		wchar_t scaleBuffer[16]{};
 		if(!(cd.type & TYPE_LINK)) {

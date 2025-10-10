@@ -1015,22 +1015,22 @@ void Game::DrawSpec() {
 				lstr = L"Draw Game";
 				break;
 			case 4:
-				lstr = L"资源补给阶段";
+				lstr = dataManager.GetSysString(1632);
 				break;
 			case 5:
-				lstr = L"战备准备阶段";
+				lstr = dataManager.GetSysString(1633);
 				break;
 			case 6:
-				lstr = L"单位部署阶段";
+				lstr = dataManager.GetSysString(1634);
 				break;
 			case 7:
-				lstr = L"星际交战阶段";
+				lstr = dataManager.GetSysString(1635);
 				break;
 			case 8:
-				lstr = L"战后整备阶段";
+				lstr = dataManager.GetSysString(1636);
 				break;
 			case 9:
-				lstr = L"回合休整阶段";
+				lstr = dataManager.GetSysString(1637);
 				break;
 			case 10:
 				lstr = L"下名玩家行动";
@@ -1438,10 +1438,10 @@ void Game::DrawDeckBd() {
 			availBuffer = L" [TCG]";
 		else if ((ptr->second.ot & AVAIL_CUSTOM) == AVAIL_CUSTOM)
 			availBuffer = L" [Custom]";
-		if(ptr->second.type & TYPE_MONSTER) {
-			myswprintf(textBuffer, L"%ls", dataManager.GetName(ptr->first));
-			DrawShadowText(textFont, textBuffer, Resize(860, 165 + i * 66, 955, 185 + i * 66), Resize(1, 1, 0, 0));
-			const wchar_t* form = L"补给";
+			if(ptr->second.type & TYPE_MONSTER) {
+				myswprintf(textBuffer, L"%ls", dataManager.GetName(ptr->first));
+				DrawShadowText(textFont, textBuffer, Resize(860, 165 + i * 66, 955, 185 + i * 66), Resize(1, 1, 0, 0));
+				const wchar_t* form = dataManager.GetSysString(1626);
 			wchar_t adBuffer[32]{};
 			wchar_t scaleBuffer[16]{};
 			if(!(ptr->second.type & TYPE_LINK)) {
