@@ -1116,7 +1116,7 @@ bool Game::Initialize() {
 	env->setFocus(wMainMenu);
 	for (int i = 0; i < irr::gui::EGDC_COUNT; ++i) {
 		auto col = env->getSkin()->getColor((irr::gui::EGUI_DEFAULT_COLOR)i);
-		col.setAlpha(224);
+		col.setAlpha(245);
 		env->getSkin()->setColor((irr::gui::EGUI_DEFAULT_COLOR)i, col);
 	}
 	for (auto ptr : editbox_list)
