@@ -2005,6 +2005,8 @@ bool ClientField::OnCommonEvent(const irr::SEvent& event) {
 			case COMBOBOX_LOCALE: {
 				myswprintf(mainGame->gameConf.locale, L"%ls",  mainGame->cbLocale->getItem(mainGame->cbLocale->getSelected()));
 				mainGame->SaveConfig();
+				mainGame->SetStaticText(mainGame->stMessage, 310, mainGame->guiFont, dataManager.GetSysString(1625));
+				mainGame->PopupElement(mainGame->wMessage);
 				return true;
 				break;
 			}

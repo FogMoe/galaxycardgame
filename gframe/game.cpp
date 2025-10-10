@@ -563,9 +563,8 @@ bool Game::Initialize() {
 	chkEnablePScale = env->addCheckBox(false, irr::core::rect<irr::s32>(posX, posY, posX + 260, posY + 25), tabSystem, -1, dataManager.GetSysString(1269));
 	chkEnablePScale->setChecked(gameConf.chkEnablePScale != 0);
 	chkEnablePScale->setVisible(false); // 隐藏"数字灵摆图片"选择框
-	posY += 30;
 	env->addStaticText(dataManager.GetSysString(1267), irr::core::rect<irr::s32>(posX + 23, posY + 3, posX + 160, posY + 28), false, false, tabSystem);
-	cbLocale = env->addComboBox(irr::core::rect<irr::s32>(posX + 150, posY + 4, posX + 250, posY + 21), tabSystem, COMBOBOX_LOCALE);
+	cbLocale = env->addComboBox(irr::core::rect<irr::s32>(posX + 150, posY, posX + 250, posY + 21), tabSystem, COMBOBOX_LOCALE);
 	RefreshLocales();
 	elmTabSystemLast = cbLocale;
 	//
