@@ -1,4 +1,4 @@
---[[message 新手指引 Beginner Guide]]
+--[[message 新手指引教程 Beginner Guide]]
 -- 教程目标：在当前回合内击败「人类叛军」AI，学习部署与战术运用流程。
 
 Debug.SetAIName("人类叛军 Human rebels")
@@ -21,7 +21,7 @@ Debug.AddCard(10000009, 0, 0, LOCATION_HAND, 0, POS_FACEDOWN)
 -- 我方卡组顶：精确打击（部署先锋后通过补给线抽得）
 Debug.AddCard(10000028, 0, 0, LOCATION_DECK, 0, POS_FACEDOWN)
 Debug.AddCard(10000018, 0, 0, LOCATION_DECK, 0, POS_FACEDOWN)
-Debug.ShowHint("指挥官：欢迎来到新手指引。目标是在这个回合内消灭人类叛军。")
+Debug.ShowHint("指挥官：欢迎来到新手指引教程。目标是在这个回合内消灭人类叛军。")
 Debug.ShowHint("Commander: Welcome to the Beginner Guide. Your goal is to destroy the human rebels within this round.")
 Debug.ShowHint("回合结束即判定失败。请按照引导完成第一场胜利。祝你好运！")
 Debug.ShowHint("If you end your turn, you will lose. Please follow the instructions to complete your first victory. Good luck!")
