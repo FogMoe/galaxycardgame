@@ -2364,8 +2364,8 @@ function Galaxy.SummonForStart(e,tp,eg,ep,ev,re,r,rp)
 end
 
 function Galaxy.FirstTurnTokenCondition(e,tp,eg,ep,ev,re,r,rp)
-	--检查是否为先攻玩家的第一次抽卡
-	return Duel.GetCurrentPhase() == PHASE_DRAW
+	--检查是否为先攻玩家的第一次抽卡,且卡组中卡片大于0(确定不是残局模式)
+	return Duel.GetCurrentPhase() == PHASE_DRAW and Duel.GetFieldGroupCount(1,LOCATION_DECK,0) > 0
 end
 
 function Galaxy.FirstTurnTokenOperation(e,tp,eg,ep,ev,re,r,rp)
