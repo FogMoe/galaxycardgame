@@ -518,6 +518,7 @@ public:
 	irr::gui::IGUICheckBox* chkSinglePlayReturnDeckTop;
 	irr::gui::IGUIButton* btnLoadSinglePlay;
 	irr::gui::IGUIButton* btnSinglePlayCancel;
+	std::vector<std::wstring> singlePlayFileNames;
 	//hand
 	irr::gui::IGUIWindow* wHand;
 	irr::gui::IGUIButton* btnHand[3];

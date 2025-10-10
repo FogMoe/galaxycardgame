@@ -582,18 +582,18 @@ bool MenuHandler::OnEvent(const irr::SEvent& event) {
 				mainGame->SetStaticText(mainGame->stReplayInfo, 180, mainGame->guiFont, repinfo.c_str());
 				break;
 			}
-			case LISTBOX_SINGLEPLAY_LIST: {
-				int sel = mainGame->lstSinglePlayList->getSelected();
-				if(sel == -1)
-					break;
-				const wchar_t* name = mainGame->lstSinglePlayList->getListItem(sel);
-				wchar_t fname[256];
-				myswprintf(fname, L"./single/%ls", name);
-				FILE* fp = mywfopen(fname, "rb");
-				if(!fp) {
-					mainGame->stSinglePlayInfo->setText(L"");
-					break;
-				}
+				case LISTBOX_SINGLEPLAY_LIST: {
+					int sel = mainGame->lstSinglePlayList->getSelected();
+					if(sel == -1 || static_cast<size_t>(sel) >= mainGame->singlePlayFileNames.size())
+						break;
+					const std::wstring& name = mainGame->singlePlayFileNames[sel];
+					wchar_t fname[256];
+					myswprintf(fname, L"./single/%ls", name.c_str());
+					FILE* fp = mywfopen(fname, "rb");
+					if(!fp) {
+						mainGame->stSinglePlayInfo->setText(L"");
+						break;
+					}
 				char linebuf[1024];
 				wchar_t wlinebuf[1024];
 				std::wstring message = L"";

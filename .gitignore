@@ -54,7 +54,7 @@ build
 /pack
 #/fonts
 /replay
-/single
+#/single
 /screenshots
 #/sound/*.wav
 #/sound/custom

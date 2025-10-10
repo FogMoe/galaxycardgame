@@ -90,9 +90,14 @@ int SingleMode::SinglePlayThread() {
 				slen = 0;
 		}
 	} else {
-		const wchar_t* name = mainGame->lstSinglePlayList->getListItem(mainGame->lstSinglePlayList->getSelected());
+		int sel = mainGame->lstSinglePlayList->getSelected();
+		if(sel < 0 || static_cast<size_t>(sel) >= mainGame->singlePlayFileNames.size()) {
+			end_duel(pduel);
+			return 0;
+		}
+		const std::wstring& entry = mainGame->singlePlayFileNames[sel];
 		wchar_t fname[256]{};
-		myswprintf(fname, L"./single/%ls", name);
+		myswprintf(fname, L"./single/%ls", entry.c_str());
 		slen = BufferIO::EncodeUTF8(fname, filename);
 		if(!preload_script(pduel, filename))
 			slen = 0;
