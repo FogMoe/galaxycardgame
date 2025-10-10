@@ -272,6 +272,32 @@ bool Game::Initialize() {
 	ebNickName = env->addEditBox(gameConf.nickname, irr::core::rect<irr::s32>(110, 25, 450, 50), true, wLanWindow);
 	ebNickName->setTextAlignment(irr::gui::EGUIA_UPPERLEFT, irr::gui::EGUIA_CENTER);
 	editbox_list.push_back(ebNickName);
+#ifdef YGOPRO_USE_STEAM_SDK
+	if(steam_sdk_available) {
+		if(ISteamUser* steam_user = SteamUser()) {
+			if(steam_user->BLoggedOn()) {
+				// Lock nickname to the Steam persona name (fallback to SteamID) whenever the game runs under Steam.
+				const unsigned long long steam_id_value = static_cast<unsigned long long>(steam_user->GetSteamID().ConvertToUint64());
+				wchar_t locked_name[256]{};
+				bool has_persona_name = false;
+				if(ISteamFriends* steam_friends = SteamFriends()) {
+					if(const char* persona_name = steam_friends->GetPersonaName()) {
+						if(persona_name[0]) {
+							BufferIO::DecodeUTF8(persona_name, locked_name);
+							if(locked_name[0])
+								has_persona_name = true;
+						}
+					}
+				}
+				if(!has_persona_name)
+					myswprintf(locked_name, L"%llu", steam_id_value);
+				ebNickName->setText(locked_name);
+				ebNickName->setEnabled(false);
+				BufferIO::CopyWideString(locked_name, gameConf.nickname);
+			}
+		}
+	}
+#endif
 	lstHostList = env->addListBox(irr::core::rect<irr::s32>(10, 60, 570, 320), wLanWindow, LISTBOX_LAN_HOST, true);
 	lstHostList->setItemHeight(18);
 	btnLanRefresh = env->addButton(irr::core::rect<irr::s32>(150, 325, 250, 350), wLanWindow, BUTTON_LAN_REFRESH, dataManager.GetSysString(1217));

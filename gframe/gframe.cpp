@@ -126,7 +126,7 @@ int main(int argc, char* argv[]) {
 			continue;
 		} else if(!std::wcscmp(wargv[i], L"-n")) { // nickName
 			++i;
-			if(i < wargc)
+			if(i < wargc && ygo::mainGame->ebNickName->isEnabled())
 				ygo::mainGame->ebNickName->setText(wargv[i]);
 			continue;
 		} else if(!std::wcscmp(wargv[i], L"-h")) { // Host address
