@@ -4,7 +4,7 @@ function s.initial(c)
 	--在部署的回合就可以攻击（疾驰效果）
 	local e1=Effect.CreateEffect(c)
 	e1:SetType(EFFECT_TYPE_SINGLE)
-	e1:SetCode(EFFECT_RUSH)
+	e1:SetCode(EFFECT_RUSH_R)
 	c:RegisterEffect(e1)
 	--当你控制其他哺乳类单位时，+1战斗力
 	local e2=Effect.CreateEffect(c)

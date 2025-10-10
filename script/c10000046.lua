@@ -5,7 +5,7 @@ function s.initial(c)
 	--冲锋能力
 	local e1=Effect.CreateEffect(c)
 	e1:SetType(EFFECT_TYPE_SINGLE)
-	e1:SetCode(EFFECT_RUSH)
+	e1:SetCode(EFFECT_RUSH_R)
 	c:RegisterEffect(e1)
 
 	--基于其他节肢类单位的攻击力加成

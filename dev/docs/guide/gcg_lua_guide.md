@@ -90,7 +90,7 @@
 
 ### 3.4 战斗与战术规则
 - `Galaxy.PlayerRule` 与 `Galaxy.BattleRule` 会全局限制：
-  - 召唤当回合不能攻击（除非拥有 `EFFECT_RUSH`）。
+  - 召唤当回合不能攻击（除非拥有 `EFFECT_RUSH` / `EFFECT_RUSH_R`，后者部署回合仍禁止直击）。
   - 怪兽对怪兽战斗不产生 LP 伤害。
   - 攻击目标优先选择拥有 `EFFECT_PROTECT` 但没有隐身的单位。
 - `Galaxy.TacticsRule` 把所有战术（陷阱）改为对手回合从手牌发动，无需逐卡实现。
@@ -108,6 +108,7 @@
 | `EFFECT_LETHAL (506)` | 致命：战斗后无护盾即击杀 | 与护盾互动 |
 | `EFFECT_STEALTH (507)` | 隐身：不可被选作目标 | 攻击/发动后移除 |
 | `EFFECT_STEALTH_HINT (508)` | 隐身 UI 标记 | **勿**手动注册 |
+| `EFFECT_RUSH_R (509)` | 部署回合可攻击单位但不能直击 | 就算对手空场部署回合也不能直击，若同时拥有 RUSH 则以 RUSH 为准 |
 
 语义化别名（在 `Card` 对象上）：
 - HP 相关：`GetHp()`、`GetMaxHp()`、`GetBaseHp()`。
@@ -246,5 +247,3 @@ end
 - 关键常量定义：`script/constant.lua`
 - Galaxy 框架实现：`script/utility.lua`
 - 示例卡脚本：`script/c10000000.lua` ~ `c10000102.lua`
-
-

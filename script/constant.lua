@@ -668,6 +668,7 @@ EFFECT_UPDATE_HP = 505 --持续影响的增减生命力
 EFFECT_LETHAL = 506 --致命：战斗后若目标无护盾则直接击杀
 EFFECT_STEALTH = 507 --潜行：不能成为攻击和效果的对象，攻击后移除
 EFFECT_STEALTH_HINT = 508 --潜行提示
+EFFECT_RUSH_R = 509 --在部署的回合就可以攻击单位但不能直击
 
 --自定义事件基础常量
 EVENT_CUSTOM = 0x10000000 --自訂事件
