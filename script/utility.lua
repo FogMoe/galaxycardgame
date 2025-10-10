@@ -2387,6 +2387,14 @@ function Galaxy.BattleRule(c)
 	e1:SetTarget(Galaxy.SummonThisTurn)
 	e1:SetTargetRange(LOCATION_MZONE, LOCATION_MZONE)
 	Duel.RegisterEffect(e1, 0)
+	--RUSH_R 部署回合禁止直击
+	local e1r = Effect.CreateEffect(c)
+	e1r:SetType(EFFECT_TYPE_FIELD)
+	e1r:SetCode(EFFECT_CANNOT_DIRECT_ATTACK)
+	e1r:SetProperty(property)
+	e1r:SetTargetRange(LOCATION_MZONE, LOCATION_MZONE)
+	e1r:SetTarget(Galaxy.RushRSummonNoDirect)
+	Duel.RegisterEffect(e1r, 0)
 	--战斗结束时处理降低怪兽生命
 	local e2 = Effect.CreateEffect(c)
 	e2:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
@@ -2434,8 +2442,21 @@ end
 
 --在本回合召唤
 function Galaxy.SummonThisTurn(e,c)
-	return not c:IsHasEffect(EFFECT_RUSH) and (c:IsStatus(STATUS_SUMMON_TURN)
+	local has_rush = c:IsHasEffect(EFFECT_RUSH) or c:IsHasEffect(EFFECT_RUSH_R)
+	return not has_rush and (c:IsStatus(STATUS_SUMMON_TURN)
 		or c:IsStatus(STATUS_FLIP_SUMMON_TURN) or c:IsStatus(STATUS_SPSUMMON_TURN))
+end
+
+function Galaxy.RushRSummonNoDirect(e,c)
+	if not c or not c:IsHasEffect(EFFECT_RUSH_R) then
+		return false
+	end
+	if c:IsHasEffect(EFFECT_RUSH) then
+		return false
+	end
+	return c:IsStatus(STATUS_SUMMON_TURN)
+		or c:IsStatus(STATUS_FLIP_SUMMON_TURN)
+		or c:IsStatus(STATUS_SPSUMMON_TURN)
 end
 
 --伤害步骤结束时处理守备力减少（仅怪兽对怪兽战斗时）
@@ -2497,6 +2518,11 @@ end
 function Galaxy.DirectAttackCondition(e)
 	local c = e:GetHandler()
 	local tp = c:GetControler()
+	if c:IsHasEffect(EFFECT_RUSH_R) and not c:IsHasEffect(EFFECT_RUSH)
+		and (c:IsStatus(STATUS_SUMMON_TURN) or c:IsStatus(STATUS_FLIP_SUMMON_TURN)
+		or c:IsStatus(STATUS_SPSUMMON_TURN)) then
+		return false
+	end
 	-- 检查自身是否被禁止直接攻击
 	if c:IsHasEffect(EFFECT_CANNOT_DIRECT_ATTACK) then
 		return false

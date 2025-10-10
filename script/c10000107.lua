@@ -16,7 +16,7 @@ function s.initial(c)
     -- 装备着强化卡时，本回合可攻击（Rush）
     local e2=Effect.CreateEffect(c)
     e2:SetType(EFFECT_TYPE_SINGLE)
-    e2:SetCode(EFFECT_RUSH)
+    e2:SetCode(EFFECT_RUSH_R)
     e2:SetProperty(EFFECT_FLAG_SINGLE_RANGE)
     e2:SetRange(GALAXY_LOCATION_UNIT_ZONE)
     e2:SetCondition(s.rushcon)
