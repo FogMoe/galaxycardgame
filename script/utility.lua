@@ -2125,10 +2125,12 @@ function Galaxy.CalculateHp(e,tp,eg,ep,ev,re,r,rp)
 	local c = e:GetHandler()
 	local now_hp = c:GetHp()
 	local hp_max_ori, hp_max_now, last_effect_total = e:GetLabel() -- 获取：原始最大HP，当前最大HP，上次效果总和
+	local hp_effect = e:GetLabelObject()
 	local val = c:GetFlagEffectLabel(FLAG_ADD_HP_IMMEDIATELY_BATTLE)
 	if val then
 		now_hp = Galaxy.CalculateAddHpImmediately(c, val, now_hp, hp_max_now, REASON_BATTLE, 0)
 		if now_hp <= 0 then
+			if hp_effect then hp_effect:SetValue(0) end
 			Duel.Destroy(c, REASON_RULE)
 			return
 		end
@@ -2140,6 +2142,7 @@ function Galaxy.CalculateHp(e,tp,eg,ep,ev,re,r,rp)
 		if rev then val = -val end
 		now_hp = Galaxy.CalculateAddHpImmediately(c, val, now_hp, hp_max_now, REASON_EFFECT, rp)
 		if now_hp <= 0 then
+			if hp_effect then hp_effect:SetValue(0) end
 			Duel.Destroy(c, REASON_RULE)
 			return
 		end
@@ -2209,6 +2212,7 @@ function Galaxy.CalculateHp(e,tp,eg,ep,ev,re,r,rp)
 
 	-- 检查1：最大生命值 <= 0 导致死亡
 	if hp_max_now <= 0 then
+		if hp_effect then hp_effect:SetValue(0) end
 		Duel.Destroy(c, REASON_RULE)
 		return
 	end
@@ -2220,11 +2224,14 @@ function Galaxy.CalculateHp(e,tp,eg,ep,ev,re,r,rp)
 
 	-- 检查3：当前生命值 <= 0 导致死亡
 	if now_hp <= 0 then
+		if hp_effect then hp_effect:SetValue(0) end
 		Duel.Destroy(c, REASON_RULE)
 		return
 	end
 
-	e:GetLabelObject():SetValue(now_hp)
+	if hp_effect then
+		hp_effect:SetValue(now_hp)
+	end
 end
 
 --计算护盾并触发HP事件
@@ -2597,6 +2604,18 @@ end
 -- Galaxy Card 函数
 --==============================================
 
+function Galaxy.GetHpSystemEffect(c)
+	if not c then return nil end
+	local eff = c:IsHasEffect(EVENT_ADJUST)
+	while eff do
+		if eff:GetOperation() == Galaxy.CalculateHp then
+			return eff
+		end
+		eff = eff:GetNext()
+	end
+	return nil
+end
+
 --获取/检查 单位生命值相关
 Card.GetHp = Card.GetDefense
 Card.GetBaseHp = Card.GetBaseDefense
@@ -2608,15 +2627,13 @@ Card.GetOriginalHp = Card.GetTextDefense
 -- 新增生命值相关函数
 -- 获取最大生命值（包含所有EFFECT_UPDATE_HP效果的动态最大值）
 function Card.GetMaxHp(c)
-	-- 查找Galaxy.CalculateHp注册的EVENT_ADJUST效果
-	local effects = {c:IsHasEffect(EVENT_ADJUST)}
-	for _, eff in ipairs(effects) do
-		if eff:GetOperation() == Galaxy.CalculateHp then
-			local hp_max_ori, hp_max_now, last_effect_total = eff:GetLabel()
-			return hp_max_now or c:GetOriginalHp()
+	local eff = Galaxy.GetHpSystemEffect(c)
+	if eff then
+		local _, hp_max_now = eff:GetLabel()
+		if type(hp_max_now) == "number" then
+			return hp_max_now
 		end
 	end
-	-- 如果没找到HP计算系统，返回基础值basehp
 	return c:GetOriginalHp()
 end
 
@@ -2723,19 +2740,16 @@ function Duel.SetHp(g_c, hp)
 		if desired_hp < 0 then desired_hp = 0 end
 
 		local hp_system_found = false
-		local effects = {c:IsHasEffect(EVENT_ADJUST)}
-		for _, eff in ipairs(effects) do
-			if eff:GetOperation() == Galaxy.CalculateHp then
-				local hp_max_ori, hp_max_now = eff:GetLabel()
-				if type(hp_max_now) == "number" and desired_hp > hp_max_now then
-					desired_hp = hp_max_now
-				end
-				local hp_effect = eff:GetLabelObject()
-				if hp_effect then
-					hp_effect:SetValue(desired_hp)
-				end
+		local eff = Galaxy.GetHpSystemEffect(c)
+		if eff then
+			local _, hp_max_now = eff:GetLabel()
+			if type(hp_max_now) == "number" and desired_hp > hp_max_now then
+				desired_hp = hp_max_now
+			end
+			local hp_effect = eff:GetLabelObject()
+			if hp_effect then
+				hp_effect:SetValue(desired_hp)
 				hp_system_found = true
-				break
 			end
 		end
 
