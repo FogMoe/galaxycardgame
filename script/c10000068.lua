@@ -1,6 +1,6 @@
 --极光"蚊笼"
 --1当场上存在"共振壳"或"高能区域"时才可以部署，这个大型单位可以自行部署。
---2"共振壳"不存在于场上时，自己回合休整阶段，如果对方场上存在单位，则对其场上生命值最低的单位造成X点伤害，并恢复2点生命值（X为这张卡的原本生命值-当前生命值）。
+--2"共振壳"不存在于场上时，自己回合休整阶段，如果对方场上存在单位，则对其场上生命值最低的单位造成X点伤害，并获得2点生命值（X为这张卡的原本生命值-当前生命值）。
 --3保护友方单位。
 --4当场上不存在"共振壳"或"高能区域"时破坏。
 --5在场上被破坏时对全场单位造成这张卡剩余生命值的伤害。
@@ -177,7 +177,7 @@ function s.is_better_target(c,reference)
 	return c:GetFieldID()<reference:GetFieldID()
 end
 
--- 休整阶段操作：伤害和恢复
+-- 休整阶段操作：伤害和获得
 function s.drainop(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
 	if not c:IsRelateToEffect(e) then return end
@@ -191,16 +191,8 @@ function s.drainop(e,tp,eg,ep,ev,re,r,rp)
 		local damage = original_hp - current_hp
 
 		if damage > 0 then
-			-- 对目标造成伤害
-			local e1=Effect.CreateEffect(c)
-			e1:SetType(EFFECT_TYPE_SINGLE)
-			e1:SetCode(EFFECT_UPDATE_HP)
-			e1:SetValue(-damage)
-			e1:SetReset(RESET_EVENT+RESETS_STANDARD)
-			target:RegisterEffect(e1)
-
-			-- 恢复自身2的生命值
-			local recover =2 
+			Duel.AddHp(target, -damage, REASON_EFFECT)
+			local recover = 2
 			if recover > 0 then
 				local e2=Effect.CreateEffect(c)
 				e2:SetType(EFFECT_TYPE_SINGLE)
@@ -224,17 +216,9 @@ function s.damop(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
 	local damage = c:GetPreviousDefenseOnField()
 	if damage > 0 then
-		-- 对全场单位造成伤害（减少生命值），系统会自动处理生命值为0的摧毁
 		local g = Duel.GetMatchingGroup(Card.IsFaceup,tp,LOCATION_MZONE,LOCATION_MZONE,nil)
-		local tc = g:GetFirst()
-		while tc do
-			local e1=Effect.CreateEffect(c)
-			e1:SetType(EFFECT_TYPE_SINGLE)
-			e1:SetCode(EFFECT_UPDATE_HP)
-			e1:SetValue(-damage)
-			e1:SetReset(RESET_EVENT+RESETS_STANDARD)
-			tc:RegisterEffect(e1)
-			tc = g:GetNext()
+		if #g > 0 then
+			Duel.AddHp(g, -damage, REASON_EFFECT)
 		end
 	end
 end

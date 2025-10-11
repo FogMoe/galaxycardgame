@@ -45,18 +45,18 @@ function s.drop(e,tp,eg,ep,ev,re,r,rp)
     end
 end
 
-function s.recfilter(c,tp)
-    return c:IsFaceup() and c:IsRace(RACE_MACHINE) and c:IsType(GALAXY_TYPE_UNIT) and c:IsControler(tp)
+function s.recfilter(c,tp,e)
+    return c:IsFaceup() and c:IsRace(RACE_MACHINE) and c:IsType(GALAXY_TYPE_UNIT) and c:IsControler(tp) and c~=e:GetHandler()
 end
 
 function s.reccon(e,tp,eg,ep,ev,re,r,rp)
-    return eg:IsExists(s.recfilter,1,nil,tp)
+    return eg:IsExists(s.recfilter,1,nil,tp,e) and e:GetHandler():GetHp()<e:GetHandler():GetMaxHp()
 end
 
 function s.recop(e,tp,eg,ep,ev,re,r,rp)
     local c=e:GetHandler()
     if not (c:IsFaceup() and c:IsRelateToEffect(e)) then return end
-    local ct=eg:FilterCount(s.recfilter,nil,tp)
+    local ct=eg:FilterCount(s.recfilter,nil,tp,e)
     if ct>0 then
         Duel.AddHp(c,ct,REASON_EFFECT)
     end

@@ -174,18 +174,9 @@ function s.damop(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
 	local damage = c:GetPreviousDefenseOnField()
 	if damage > 0 then
-		-- 对全场单位造成伤害（减少生命值）
 		local g = Duel.GetMatchingGroup(Card.IsFaceup,tp,LOCATION_MZONE,LOCATION_MZONE,nil)
-		local tc = g:GetFirst()
-		while tc do
-			-- 减少生命值，系统会自动处理生命值为0的摧毁
-			local e1=Effect.CreateEffect(c)
-			e1:SetType(EFFECT_TYPE_SINGLE)
-			e1:SetCode(EFFECT_UPDATE_HP)
-			e1:SetValue(-damage)
-			e1:SetReset(RESET_EVENT+RESETS_STANDARD)
-			tc:RegisterEffect(e1)
-			tc = g:GetNext()
+		if #g > 0 then
+			Duel.AddHp(g, -damage, REASON_EFFECT)
 		end
 	end
 end
