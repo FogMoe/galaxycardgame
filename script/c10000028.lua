@@ -8,8 +8,13 @@ function s.initial(c)
 	e1:SetProperty(EFFECT_FLAG_PLAYER_TARGET)
 	e1:SetCode(EVENT_FREE_CHAIN)
 	e1:SetTarget(s.target)
+	e1:SetCost(s.cost)
 	e1:SetOperation(s.activate)
 	c:RegisterEffect(e1)
+end
+function s.cost(e,tp,eg,ep,ev,re,r,rp,chk)
+	if chk==0 then return Duel.CheckSupplyCost(tp,2) end
+	Duel.PaySupplyCost(tp,2)
 end
 function s.target(e,tp,eg,ep,ev,re,r,rp,chk)
 	if chk==0 then return true end

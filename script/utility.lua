@@ -2693,7 +2693,7 @@ function Duel.AddHp(g_c, hp, reason)
 		error("parameter 3 should be REASON_BATTLE or REASON_EFFECT", 2)
 	end
 	for c in aux.Next(g_c) do
-		c:RegisterFlagEffect(flag, 0, EFFECT_FLAG_CANNOT_DISABLE, 1, hp)
+		c:RegisterFlagEffect(flag, RESET_EVENT+RESETS_STANDARD, EFFECT_FLAG_CANNOT_DISABLE, 1, hp)
 	end
 end
 
@@ -2741,7 +2741,7 @@ function Duel.SetHp(g_c, hp)
 
 		c:ResetFlagEffect(FLAG_SET_HP_PENDING)
 		if not hp_system_found then
-			c:RegisterFlagEffect(FLAG_SET_HP_PENDING, 0, EFFECT_FLAG_CANNOT_DISABLE, 1, desired_hp)
+			c:RegisterFlagEffect(FLAG_SET_HP_PENDING, RESET_EVENT+RESETS_STANDARD, EFFECT_FLAG_CANNOT_DISABLE, 1, desired_hp)
 		end
 		Duel.AdjustInstantly(c)
 	end
