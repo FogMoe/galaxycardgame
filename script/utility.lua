@@ -2710,7 +2710,16 @@ function Duel.AddHp(g_c, hp, reason)
 		error("parameter 3 should be REASON_BATTLE or REASON_EFFECT", 2)
 	end
 	for c in aux.Next(g_c) do
-		c:RegisterFlagEffect(flag, RESET_EVENT+RESETS_STANDARD, EFFECT_FLAG_CANNOT_DISABLE, 1, hp)
+		local delta = hp
+		local pending = c:GetFlagEffectLabel(flag)
+		if pending ~= nil then
+			if type(pending) ~= "number" then
+				pending = tonumber(pending) or 0
+			end
+			delta = delta + pending
+		end
+		c:ResetFlagEffect(flag)
+		c:RegisterFlagEffect(flag, RESET_EVENT+RESETS_STANDARD, EFFECT_FLAG_CANNOT_DISABLE, 1, delta)
 	end
 end
 
