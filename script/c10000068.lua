@@ -1,6 +1,6 @@
 --极光"蚊笼"
 --1当场上存在"共振壳"或"高能区域"时才可以部署，这个大型单位可以自行部署。
---2"共振壳"不存在于场上时，自己回合休整阶段，如果对方场上存在单位，则对其场上生命值最低的单位造成X点伤害，并获得2点生命值（X为这张卡的原本生命值-当前生命值）。
+--2"共振壳"不存在于场上时，自己回合休整阶段，如果对方场上存在单位，则对其场上生命值最低的单位造成X点伤害，并获得2点生命值（X为这张卡的max生命值-当前生命值）。
 --3保护友方单位。
 --4当场上不存在"共振壳"或"高能区域"时破坏。
 --5在场上被破坏时对全场单位造成这张卡剩余生命值的伤害。
@@ -132,7 +132,7 @@ end
 function s.draincon(e,tp,eg,ep,ev,re,r,rp)
 	return Duel.GetTurnPlayer()==tp
 		and not Duel.IsExistingMatchingCard(Card.IsCode,tp,LOCATION_ONFIELD,LOCATION_ONFIELD,1,nil,10000062)
-		and Duel.IsExistingMatchingCard(Card.IsFaceup,tp,0,LOCATION_MZONE,1,nil) and e:GetHandler():GetHp()<e:GetHandler():GetBaseHp()
+		and Duel.IsExistingMatchingCard(Card.IsFaceup,tp,0,LOCATION_MZONE,1,nil) and e:GetHandler():GetHp()<e:GetHandler():GetMaxHp()
 end
 
 -- 休整阶段效果目标：自动锁定对方最低生命值单位
@@ -185,8 +185,8 @@ function s.drainop(e,tp,eg,ep,ev,re,r,rp)
 	local target = Duel.GetFirstTarget()
 	if target then
 		if not target:IsRelateToEffect(e) then return end
-		-- 计算伤害：原本生命值 - 当前生命值
-		local original_hp = c:GetBaseHp()
+		-- 计算伤害：最大生命值 - 当前生命值
+		local original_hp = c:GetMaxHp()
 		local current_hp = c:GetHp()
 		local damage = original_hp - current_hp
 
