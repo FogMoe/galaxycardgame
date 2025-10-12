@@ -33,10 +33,23 @@
 - 当前内置成就：
   - `ACH_FIRST_LAUNCH`：首次从 Steam 启动游戏，在 `SteamAPI_Init()` 成功后标记。
   - `ACH_FIRST_DECK_BUILD`：首次从卡组编辑器返回主菜单，在 `Game::OnDeckBuilderClosed()` 中标记。
-  - `ACH_FIRST_VICTORY`：首次线上对局获胜，在 `Game::OnLocalPlayerWin()` 中标记，仅对参战玩家生效（旁观及录像不会触发）。
+  - `ACH_FIRST_VICTORY`：首次线上对局获胜，在 `Game::OnLocalPlayerWin()` 中标记，仅对参战玩家生效（旁观、录像以及单人/残局模式不会触发）。
+  - `ACH_FIRST_CAMPAIGN_WIN`：首次通关单人（Campaign/残局）模式，在 `Game::OnLocalPlayerWin()` 中且 `dInfo.isSingleMode == true` 时标记。
 - 每个触发入口都会先检查 `steam_sdk_available`，并在 Steam 服务不可用时静默跳过，确保无 SDK / 未登录情况下仍能正常游玩。
 - `TryUnlockPendingSteamAchievements()` 会重复查询 SteamUserStats，直到 Steam 客户端同步完成为止；调用是幂等的，可以安全地放在主循环。
 - 新增成就时，保持上述模式：添加状态位、在事件入口设置、在统一函数中追加 `try_unlock("<ACH_ID>", flag)`，并在后台配置成就属性。
+
+### 统计数据
+
+- 仅在定义 `YGOPRO_USE_STEAM_SDK` 且 `steam_sdk_available == true` 时才会记录或查询 Steam 统计。
+- 目前内置两个总量型统计：
+  - `TotalGamesPlayed`：在网络对战结束时（消息 `MSG_WIN`），若当前对战不是单人模式、不是录像回放且本地玩家处于 0~3 号座位，则调用 `Game::RecordSteamMatchPlayed()` 自增 1。
+  - `TotalWins`：在本地玩家真实胜出时（`Game::OnLocalPlayerWin()`），满足上述条件且非单人/非录像时调用 `Game::RecordSteamMatchWin()` 自增 1。
+- 两个自增函数内部都会先读取原值（`ISteamUserStats::GetStat`），若调用失败或达到 `int32` 上限会提前返回，写入成功后立刻调用 `StoreStats()`。
+- 对外提供的查询接口：
+  - `Game::TryGetSteamStatInt(const char* stat_id, int32_t& out_value)`：通用读取封装，返回值表示是否成功获取。
+  - `Game::GetSteamTotalGamesPlayed(int32_t& out_total_games)`、`Game::GetSteamTotalWins(int32_t& out_total_wins)`：分别返回上述两个统计的当前值。
+- 调用查询接口前需确认 `steam_sdk_available`，并避免在 Steam 客户端离线或尚未同步完成时将结果当作最终值（可与 `TryUnlockPendingSteamAchievements()` 搭配重试逻辑）。
 
 ## 编译配置
 

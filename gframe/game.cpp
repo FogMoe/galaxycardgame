@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <cwchar>
 #include <cctype>
+#include <limits>
 #ifdef YGOPRO_USE_STEAM_SDK
 #include <steam/steam_api.h>
 #endif
@@ -1277,6 +1278,7 @@ void Game::MainLoop() {
 		steam_first_launch_pending = false;
 		steam_first_deck_build_pending = false;
 		steam_first_victory_pending = false;
+		steam_first_campaign_win_pending = false;
 	}
 #endif
 	device->drop();
@@ -2304,6 +2306,57 @@ void Game::TryUnlockPendingSteamAchievements() {
 	try_unlock("ACH_FIRST_LAUNCH", steam_first_launch_pending);
 	try_unlock("ACH_FIRST_DECK_BUILD", steam_first_deck_build_pending);
 	try_unlock("ACH_FIRST_VICTORY", steam_first_victory_pending);
+	try_unlock("ACH_FIRST_CAMPAIGN_WIN", steam_first_campaign_win_pending);
+}
+void Game::RecordSteamMatchPlayed() {
+	if(!steam_sdk_available)
+		return;
+	ISteamUserStats* user_stats = SteamUserStats();
+	if(!user_stats)
+		return;
+	const char* stat_id = "TotalGamesPlayed";
+	int32 total_games = 0;
+	if(!user_stats->GetStat(stat_id, &total_games))
+		return;
+	if(total_games >= std::numeric_limits<int32>::max())
+		return;
+	if(user_stats->SetStat(stat_id, total_games + 1))
+		user_stats->StoreStats();
+}
+void Game::RecordSteamMatchWin() {
+	if(!steam_sdk_available)
+		return;
+	if(dInfo.isSingleMode || dInfo.isReplay)
+		return;
+	ISteamUserStats* user_stats = SteamUserStats();
+	if(!user_stats)
+		return;
+	const char* stat_id = "TotalWins";
+	int32 total_wins = 0;
+	if(!user_stats->GetStat(stat_id, &total_wins))
+		return;
+	if(total_wins >= std::numeric_limits<int32>::max())
+		return;
+	if(user_stats->SetStat(stat_id, total_wins + 1))
+		user_stats->StoreStats();
+}
+bool Game::TryGetSteamStatInt(const char* stat_id, int32_t& out_value) const {
+	if(!steam_sdk_available || !stat_id || !stat_id[0])
+		return false;
+	ISteamUserStats* user_stats = SteamUserStats();
+	if(!user_stats)
+		return false;
+	int32 stat_value = 0;
+	if(!user_stats->GetStat(stat_id, &stat_value))
+		return false;
+	out_value = static_cast<int32_t>(stat_value);
+	return true;
+}
+bool Game::GetSteamTotalGamesPlayed(int32_t& out_total_games) const {
+	return TryGetSteamStatInt("TotalGamesPlayed", out_total_games);
+}
+bool Game::GetSteamTotalWins(int32_t& out_total_wins) const {
+	return TryGetSteamStatInt("TotalWins", out_total_wins);
 }
 void Game::UpdateSteamRichPresence(const char* status) {
 	if(!steam_sdk_available)
@@ -2340,10 +2393,16 @@ void Game::OnDeckBuilderClosed() {
 }
 void Game::OnLocalPlayerWin() {
 #ifdef YGOPRO_USE_STEAM_SDK
-	if(steam_sdk_available) {
-		steam_first_victory_pending = true;
+	if(!steam_sdk_available)
+		return;
+	if(dInfo.isSingleMode) {
+		steam_first_campaign_win_pending = true;
 		TryUnlockPendingSteamAchievements();
+		return;
 	}
+	steam_first_victory_pending = true;
+	TryUnlockPendingSteamAchievements();
+	RecordSteamMatchWin();
 #endif
 }
 void Game::initUtils() {

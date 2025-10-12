@@ -23,6 +23,7 @@
 #include <mutex>
 #include <functional>
 #include <string>
+#include <cstdint>
 
 #ifndef YGOPRO_DEFAULT_DUEL_RULE
 #define YGOPRO_DEFAULT_DUEL_RULE			5
@@ -247,6 +248,11 @@ public:
 #ifdef YGOPRO_USE_STEAM_SDK
 	void UpdateSteamRichPresence(const char* status);
 	void TryUnlockPendingSteamAchievements();
+	void RecordSteamMatchPlayed();
+	void RecordSteamMatchWin();
+	bool TryGetSteamStatInt(const char* stat_id, int32_t& out_value) const;
+	bool GetSteamTotalGamesPlayed(int32_t& out_total_games) const;
+	bool GetSteamTotalWins(int32_t& out_total_wins) const;
 #endif
 	void OnDeckBuilderClosed();
 	void OnLocalPlayerWin();
@@ -350,6 +356,7 @@ public:
 	bool steam_first_launch_pending{};
 	bool steam_first_deck_build_pending{};
 	bool steam_first_victory_pending{};
+	bool steam_first_campaign_win_pending{};
 #endif
 
 	bool is_building{};

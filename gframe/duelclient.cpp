@@ -1787,6 +1787,10 @@ bool DuelClient::ClientAnalyze(unsigned char* msg, int len) {
 				myswprintf(vic_buf, L"%ls", dataManager.GetVictoryString(type));
 			mainGame->dInfo.vic_string = vic_buf;
 		}
+#ifdef YGOPRO_USE_STEAM_SDK
+		if(!mainGame->dInfo.isSingleMode && !mainGame->dInfo.isReplay && DuelClient::selftype < 4)
+			mainGame->RecordSteamMatchPlayed();
+#endif
 		mainGame->showcard = 101;
 		mainGame->WaitFrameSignal(120);
 		mainGame->dInfo.vic_string = L"";
