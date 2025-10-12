@@ -5,6 +5,7 @@
 #include "deck_manager.h"
 #include "sound_manager.h"
 #include "duelclient.h"
+#include <cstdint>
 
 namespace ygo {
 
@@ -1373,39 +1374,63 @@ void Game::DrawDeckBd() {
 				driver->draw2DRectangleOutline(Resize(313 + i * dx, 465, 359 + i * dx, 531));
 		}
 		//side deck - 隐藏副卡组界面
-		/*
-		driver->draw2DRectangle(Resize(310, 537, 410, 557), 0x400000ff, 0x400000ff, 0x40000000, 0x40000000);
-		driver->draw2DRectangleOutline(Resize(309, 536, 410, 557));
-		DrawShadowText(textFont, dataManager.GetSysString(1332), Resize(315, 537, 410, 557), Resize(1, 1, 1, 1), 0xffffffff, 0xff000000, false, true);
-		DrawShadowText(numFont, dataManager.GetNumString(deckManager.current_deck.side.size()), Resize(380, 538, 440, 558), Resize(1, 1, 1, 1), 0xffffffff, 0xff000000, false, true);
-		driver->draw2DRectangle(Resize(310, 560, 797, 630), 0x400000ff, 0x400000ff, 0x40000000, 0x40000000);
-		driver->draw2DRectangleOutline(Resize(309, 559, 797, 630));
+#ifdef YGOPRO_USE_STEAM_SDK
+		if(steam_sdk_available) {
+			QueueSteamTotalGamesLeaderboardUpdate();
+			QueueSteamTotalWinsLeaderboardUpdate();
+			QueueSteamWinRateLeaderboardUpdate();
+			int32_t total_games = 0;
+			int32_t total_wins = 0;
+			const bool has_total = GetSteamTotalGamesPlayed(total_games);
+			const bool has_wins = GetSteamTotalWins(total_wins);
+			const wchar_t* stats_title = dataManager.GetSysString(1640);
+			if(!stats_title || !stats_title[0])
+				stats_title = L"Steam 战绩";
+			const wchar_t* wins_label = dataManager.GetSysString(1641);
+			if(!wins_label || !wins_label[0])
+				wins_label = L"胜场";
+			const wchar_t* total_label = dataManager.GetSysString(1642);
+			if(!total_label || !total_label[0])
+				total_label = L"总场";
+			const wchar_t* rate_label = dataManager.GetSysString(1643);
+			if(!rate_label || !rate_label[0])
+				rate_label = L"胜率";
+			driver->draw2DRectangle(Resize(310, 537, 410, 557), 0x400000ff, 0x400000ff, 0x40000000, 0x40000000);
+			driver->draw2DRectangleOutline(Resize(309, 536, 410, 557));
+			DrawShadowText(textFont, stats_title, Resize(315, 537, 410, 557), Resize(1, 1, 1, 1), 0xffffffff, 0xff000000, false, true);
+			driver->draw2DRectangle(Resize(310, 560, 797, 630), 0x400000ff, 0x400000ff, 0x40000000, 0x40000000);
+			driver->draw2DRectangleOutline(Resize(309, 559, 797, 630));
 
-		//type count 2DRectangle
-		driver->draw2DRectangle(Resize(638, 537, 797, 557), 0x400000ff, 0x400000ff, 0x40000000, 0x40000000);
-		driver->draw2DRectangleOutline(Resize(637, 536, 797, 557));
-		//monster count
-		if(imageManager.tCardType)
-			driver->draw2DImage(imageManager.tCardType, ResizeCardHint(645, 537, 645+14+3/8, 557), irr::core::recti(0, 0, 23, 32), 0, 0, true);
-		DrawShadowText(numFont, dataManager.GetNumString(deckManager.TypeCount(deckManager.current_deck.side, TYPE_MONSTER)), Resize(670, 538, 690, 558), Resize(0, 1, 1, 0), 0xffffffff, 0xff000000, true, false);
-		//spell count
-		if(imageManager.tCardType)
-			driver->draw2DImage(imageManager.tCardType, ResizeCardHint(695, 537, 695+14+3/8, 557), irr::core::recti(23, 0, 46, 32), 0, 0, true);
-		DrawShadowText(numFont, dataManager.GetNumString(deckManager.TypeCount(deckManager.current_deck.side, TYPE_SPELL)), Resize(720, 538, 740, 558), Resize(0, 1, 1, 0), 0xffffffff, 0xff000000, true, false);
-			//trap count
-		if(imageManager.tCardType)
-			driver->draw2DImage(imageManager.tCardType, ResizeCardHint(745, 537, 745+14+3/8, 557), irr::core::recti(46, 0, 69, 32), 0, 0, true);
-		DrawShadowText(numFont, dataManager.GetNumString(deckManager.TypeCount(deckManager.current_deck.side, TYPE_TRAP)), Resize(770, 538, 790, 558), Resize(0, 1, 1, 0), 0xffffffff, 0xff000000, true, false);
+			const wchar_t* wins_text = L"--";
+			wchar_t wins_buf[32];
+			if(has_wins) {
+				myswprintf(wins_buf, L"%d", total_wins);
+				wins_text = wins_buf;
+			}
+			DrawShadowText(textFont, wins_label, Resize(320, 565, 400, 585), Resize(1, 1, 1, 1), 0xffffffff, 0xff000000, false, true);
+			DrawShadowText(numFont, wins_text, Resize(395, 565, 485, 585), Resize(1, 1, 1, 1), 0xffffffff, 0xff000000, false, true);
 
-		if(deckManager.current_deck.side.size() <= 10)
-			dx = 436.0f / 9;
-		else dx = 436.0f / (deckManager.current_deck.side.size() - 1);
-		for(size_t i = 0; i < deckManager.current_deck.side.size(); ++i) {
-			DrawThumb(deckManager.current_deck.side[i], irr::core::vector2di(314 + i * dx, 564), deckBuilder.filterList);
-			if(deckBuilder.hovered_pos == 3 && deckBuilder.hovered_seq == (int)i)
-				driver->draw2DRectangleOutline(Resize(313 + i * dx, 563, 359 + i * dx, 629));
+			const wchar_t* total_text = L"--";
+			wchar_t total_buf[32];
+			if(has_total) {
+				myswprintf(total_buf, L"%d", total_games);
+				total_text = total_buf;
+			}
+			DrawShadowText(textFont, total_label, Resize(320, 593, 400, 613), Resize(1, 1, 1, 1), 0xffffffff, 0xff000000, false, true);
+			DrawShadowText(numFont, total_text, Resize(395, 593, 485, 613), Resize(1, 1, 1, 1), 0xffffffff, 0xff000000, false, true);
+
+			const wchar_t* rate_text = L"--";
+			wchar_t rate_buf[32];
+			if(has_total && has_wins && total_games > 0) {
+				int64_t numerator = static_cast<int64_t>(total_wins) * 100;
+				int32_t percent = static_cast<int32_t>((numerator + total_games / 2) / total_games);
+				myswprintf(rate_buf, L"%d%%", percent);
+				rate_text = rate_buf;
+			}
+			DrawShadowText(textFont, rate_label, Resize(520, 565, 600, 585), Resize(1, 1, 1, 1), 0xffffffff, 0xff000000, false, true);
+			DrawShadowText(numFont, rate_text, Resize(595, 565, 685, 585), Resize(1, 1, 1, 1), 0xffffffff, 0xff000000, false, true);
 		}
-		*/
+#endif
 	}
 	if(is_siding) {
 		// side chat background

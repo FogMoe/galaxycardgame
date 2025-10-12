@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <cwchar>
 #include <cctype>
+#include <cstdint>
 #include <limits>
 #ifdef YGOPRO_USE_STEAM_SDK
 #include <steam/steam_api.h>
@@ -154,6 +155,9 @@ bool Game::Initialize() {
 			UpdateSteamRichPresence("Main Menu");
 			steam_first_launch_pending = true;
 			TryUnlockPendingSteamAchievements();
+			QueueSteamTotalGamesLeaderboardUpdate();
+			QueueSteamTotalWinsLeaderboardUpdate();
+			QueueSteamWinRateLeaderboardUpdate();
 		}
 	}
 #endif
@@ -1279,6 +1283,27 @@ void Game::MainLoop() {
 		steam_first_deck_build_pending = false;
 		steam_first_victory_pending = false;
 		steam_first_campaign_win_pending = false;
+		steam_total_games_leaderboard = 0;
+		steam_pending_total_games_score = -1;
+		steam_total_games_last_uploaded_score = -1;
+		steam_total_games_find_pending = false;
+		steam_total_games_upload_pending = false;
+		steam_total_games_find_call.Cancel();
+		steam_total_games_upload_call.Cancel();
+		steam_total_wins_leaderboard = 0;
+		steam_pending_total_wins_score = -1;
+		steam_total_wins_last_uploaded_score = -1;
+		steam_total_wins_find_pending = false;
+		steam_total_wins_upload_pending = false;
+		steam_total_wins_find_call.Cancel();
+		steam_total_wins_upload_call.Cancel();
+		steam_win_rate_leaderboard = 0;
+		steam_pending_win_rate_score = -1;
+		steam_win_rate_last_uploaded_score = -1;
+		steam_win_rate_find_pending = false;
+		steam_win_rate_upload_pending = false;
+		steam_win_rate_find_call.Cancel();
+		steam_win_rate_upload_call.Cancel();
 	}
 #endif
 	device->drop();
@@ -2322,6 +2347,8 @@ void Game::RecordSteamMatchPlayed() {
 		return;
 	if(user_stats->SetStat(stat_id, total_games + 1))
 		user_stats->StoreStats();
+	QueueSteamWinRateLeaderboardUpdate();
+	QueueSteamTotalGamesLeaderboardUpdate();
 }
 void Game::RecordSteamMatchWin() {
 	if(!steam_sdk_available)
@@ -2339,6 +2366,7 @@ void Game::RecordSteamMatchWin() {
 		return;
 	if(user_stats->SetStat(stat_id, total_wins + 1))
 		user_stats->StoreStats();
+	QueueSteamTotalWinsLeaderboardUpdate();
 }
 bool Game::TryGetSteamStatInt(const char* stat_id, int32_t& out_value) const {
 	if(!steam_sdk_available || !stat_id || !stat_id[0])
@@ -2357,6 +2385,192 @@ bool Game::GetSteamTotalGamesPlayed(int32_t& out_total_games) const {
 }
 bool Game::GetSteamTotalWins(int32_t& out_total_wins) const {
 	return TryGetSteamStatInt("TotalWins", out_total_wins);
+}
+void Game::QueueSteamTotalGamesLeaderboardUpdate() {
+	if(!steam_sdk_available)
+		return;
+	ISteamUserStats* user_stats = SteamUserStats();
+	if(!user_stats)
+		return;
+	int32 total_games = 0;
+	if(!user_stats->GetStat("TotalGamesPlayed", &total_games))
+		return;
+	if(total_games < 0)
+		total_games = 0;
+	steam_pending_total_games_score = total_games;
+	if(steam_total_games_leaderboard) {
+		if(steam_total_games_last_uploaded_score == total_games && !steam_total_games_upload_pending)
+			return;
+		SubmitSteamTotalGamesLeaderboardScore();
+		return;
+	}
+	if(steam_total_games_find_pending)
+		return;
+	SteamAPICall_t call = user_stats->FindOrCreateLeaderboard("TotalGamesPlayedLeaderboard", k_ELeaderboardSortMethodDescending, k_ELeaderboardDisplayTypeNumeric);
+	if(call == k_uAPICallInvalid)
+		return;
+	steam_total_games_find_pending = true;
+	steam_total_games_find_call.Set(call, this, &Game::OnTotalGamesLeaderboardFindResult);
+}
+void Game::SubmitSteamTotalGamesLeaderboardScore() {
+	if(!steam_sdk_available)
+		return;
+	if(!steam_total_games_leaderboard || steam_pending_total_games_score < 0)
+		return;
+	if(steam_total_games_upload_pending)
+		return;
+	if(steam_total_games_last_uploaded_score == steam_pending_total_games_score)
+		return;
+	ISteamUserStats* user_stats = SteamUserStats();
+	if(!user_stats)
+		return;
+	SteamAPICall_t call = user_stats->UploadLeaderboardScore(steam_total_games_leaderboard, k_ELeaderboardUploadScoreMethodForceUpdate, steam_pending_total_games_score, nullptr, 0);
+	if(call == k_uAPICallInvalid)
+		return;
+	steam_total_games_upload_pending = true;
+	steam_total_games_upload_call.Set(call, this, &Game::OnTotalGamesLeaderboardScoreUploaded);
+}
+void Game::OnTotalGamesLeaderboardFindResult(LeaderboardFindResult_t* result, bool io_failure) {
+	steam_total_games_find_pending = false;
+	if(io_failure || !result || !result->m_bLeaderboardFound)
+		return;
+	steam_total_games_leaderboard = result->m_hSteamLeaderboard;
+	if(steam_pending_total_games_score >= 0)
+		SubmitSteamTotalGamesLeaderboardScore();
+}
+void Game::OnTotalGamesLeaderboardScoreUploaded(LeaderboardScoreUploaded_t* result, bool io_failure) {
+	steam_total_games_upload_pending = false;
+	if(io_failure || !result || !result->m_bSuccess)
+		return;
+	steam_pending_total_games_score = result->m_nScore;
+	steam_total_games_last_uploaded_score = result->m_nScore;
+}
+void Game::QueueSteamTotalWinsLeaderboardUpdate() {
+	if(!steam_sdk_available)
+		return;
+	ISteamUserStats* user_stats = SteamUserStats();
+	if(!user_stats)
+		return;
+	int32 total_wins = 0;
+	if(!user_stats->GetStat("TotalWins", &total_wins))
+		return;
+	if(total_wins < 0)
+		total_wins = 0;
+	steam_pending_total_wins_score = total_wins;
+	if(steam_total_wins_leaderboard) {
+		if(steam_total_wins_last_uploaded_score == total_wins && !steam_total_wins_upload_pending)
+			return;
+		SubmitSteamTotalWinsLeaderboardScore();
+		return;
+	}
+	if(steam_total_wins_find_pending)
+		return;
+	SteamAPICall_t call = user_stats->FindOrCreateLeaderboard("TotalWinsLeaderboard", k_ELeaderboardSortMethodDescending, k_ELeaderboardDisplayTypeNumeric);
+	if(call == k_uAPICallInvalid)
+		return;
+	steam_total_wins_find_pending = true;
+	steam_total_wins_find_call.Set(call, this, &Game::OnTotalWinsLeaderboardFindResult);
+}
+void Game::SubmitSteamTotalWinsLeaderboardScore() {
+	if(!steam_sdk_available)
+		return;
+	if(!steam_total_wins_leaderboard || steam_pending_total_wins_score < 0)
+		return;
+	if(steam_total_wins_upload_pending)
+		return;
+	if(steam_total_wins_last_uploaded_score == steam_pending_total_wins_score)
+		return;
+	ISteamUserStats* user_stats = SteamUserStats();
+	if(!user_stats)
+		return;
+	SteamAPICall_t call = user_stats->UploadLeaderboardScore(steam_total_wins_leaderboard, k_ELeaderboardUploadScoreMethodForceUpdate, steam_pending_total_wins_score, nullptr, 0);
+	if(call == k_uAPICallInvalid)
+		return;
+	steam_total_wins_upload_pending = true;
+	steam_total_wins_upload_call.Set(call, this, &Game::OnTotalWinsLeaderboardScoreUploaded);
+}
+void Game::OnTotalWinsLeaderboardFindResult(LeaderboardFindResult_t* result, bool io_failure) {
+	steam_total_wins_find_pending = false;
+	if(io_failure || !result || !result->m_bLeaderboardFound)
+		return;
+	steam_total_wins_leaderboard = result->m_hSteamLeaderboard;
+	if(steam_pending_total_wins_score >= 0)
+		SubmitSteamTotalWinsLeaderboardScore();
+}
+void Game::OnTotalWinsLeaderboardScoreUploaded(LeaderboardScoreUploaded_t* result, bool io_failure) {
+	steam_total_wins_upload_pending = false;
+	if(io_failure || !result || !result->m_bSuccess)
+		return;
+	steam_pending_total_wins_score = result->m_nScore;
+	steam_total_wins_last_uploaded_score = result->m_nScore;
+}
+void Game::QueueSteamWinRateLeaderboardUpdate() {
+	if(!steam_sdk_available)
+		return;
+	ISteamUserStats* user_stats = SteamUserStats();
+	if(!user_stats)
+		return;
+	int32 total_games = 0;
+	if(!user_stats->GetStat("TotalGamesPlayed", &total_games))
+		return;
+	if(total_games < 100)
+		return;
+	int32 total_wins = 0;
+	if(!user_stats->GetStat("TotalWins", &total_wins))
+		return;
+	if(total_wins < 0)
+		total_wins = 0;
+	int64_t numerator = static_cast<int64_t>(total_wins) * 100;
+	int32 score = static_cast<int32>((numerator + (total_games / 2)) / total_games);
+	if(score < 0)
+		score = 0;
+	steam_pending_win_rate_score = score;
+	if(steam_win_rate_leaderboard) {
+		if(steam_win_rate_last_uploaded_score == score && !steam_win_rate_upload_pending)
+			return;
+		SubmitSteamWinRateScore();
+		return;
+	}
+	if(steam_win_rate_find_pending)
+		return;
+	SteamAPICall_t call = user_stats->FindOrCreateLeaderboard("WinRateLeaderboard", k_ELeaderboardSortMethodDescending, k_ELeaderboardDisplayTypeNumeric);
+	if(call == k_uAPICallInvalid)
+		return;
+	steam_win_rate_find_pending = true;
+	steam_win_rate_find_call.Set(call, this, &Game::OnWinRateLeaderboardFindResult);
+}
+void Game::SubmitSteamWinRateScore() {
+	if(!steam_sdk_available)
+		return;
+	if(!steam_win_rate_leaderboard || steam_pending_win_rate_score < 0)
+		return;
+	if(steam_win_rate_upload_pending)
+		return;
+	if(steam_win_rate_last_uploaded_score == steam_pending_win_rate_score)
+		return;
+	ISteamUserStats* user_stats = SteamUserStats();
+	if(!user_stats)
+		return;
+	SteamAPICall_t call = user_stats->UploadLeaderboardScore(steam_win_rate_leaderboard, k_ELeaderboardUploadScoreMethodForceUpdate, steam_pending_win_rate_score, nullptr, 0);
+	if(call == k_uAPICallInvalid)
+		return;
+	steam_win_rate_upload_pending = true;
+	steam_win_rate_upload_call.Set(call, this, &Game::OnWinRateLeaderboardScoreUploaded);
+}
+void Game::OnWinRateLeaderboardFindResult(LeaderboardFindResult_t* result, bool io_failure) {
+	steam_win_rate_find_pending = false;
+	if(io_failure || !result || !result->m_bLeaderboardFound)
+		return;
+	steam_win_rate_leaderboard = result->m_hSteamLeaderboard;
+	if(steam_pending_win_rate_score >= 0)
+		SubmitSteamWinRateScore();
+}
+void Game::OnWinRateLeaderboardScoreUploaded(LeaderboardScoreUploaded_t* result, bool io_failure) {
+	steam_win_rate_upload_pending = false;
+	if(io_failure || !result || !result->m_bSuccess)
+		return;
+	steam_pending_win_rate_score = result->m_nScore;
+	steam_win_rate_last_uploaded_score = result->m_nScore;
 }
 void Game::UpdateSteamRichPresence(const char* status) {
 	if(!steam_sdk_available)

@@ -2,6 +2,9 @@
 #define GAME_H
 
 #include "config.h"
+#ifdef YGOPRO_USE_STEAM_SDK
+#include <steam/steam_api.h>
+#endif
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
 #include <OpenGL/glu.h>
@@ -250,6 +253,18 @@ public:
 	void TryUnlockPendingSteamAchievements();
 	void RecordSteamMatchPlayed();
 	void RecordSteamMatchWin();
+	void QueueSteamTotalGamesLeaderboardUpdate();
+	void SubmitSteamTotalGamesLeaderboardScore();
+	void OnTotalGamesLeaderboardFindResult(LeaderboardFindResult_t* result, bool io_failure);
+	void OnTotalGamesLeaderboardScoreUploaded(LeaderboardScoreUploaded_t* result, bool io_failure);
+	void QueueSteamTotalWinsLeaderboardUpdate();
+	void SubmitSteamTotalWinsLeaderboardScore();
+	void OnTotalWinsLeaderboardFindResult(LeaderboardFindResult_t* result, bool io_failure);
+	void OnTotalWinsLeaderboardScoreUploaded(LeaderboardScoreUploaded_t* result, bool io_failure);
+	void QueueSteamWinRateLeaderboardUpdate();
+	void SubmitSteamWinRateScore();
+	void OnWinRateLeaderboardFindResult(LeaderboardFindResult_t* result, bool io_failure);
+	void OnWinRateLeaderboardScoreUploaded(LeaderboardScoreUploaded_t* result, bool io_failure);
 	bool TryGetSteamStatInt(const char* stat_id, int32_t& out_value) const;
 	bool GetSteamTotalGamesPlayed(int32_t& out_total_games) const;
 	bool GetSteamTotalWins(int32_t& out_total_wins) const;
@@ -357,6 +372,27 @@ public:
 	bool steam_first_deck_build_pending{};
 	bool steam_first_victory_pending{};
 	bool steam_first_campaign_win_pending{};
+	SteamLeaderboard_t steam_total_games_leaderboard{};
+	CCallResult<Game, LeaderboardFindResult_t> steam_total_games_find_call;
+	CCallResult<Game, LeaderboardScoreUploaded_t> steam_total_games_upload_call;
+	int32_t steam_pending_total_games_score{ -1 };
+	int32_t steam_total_games_last_uploaded_score{ -1 };
+	bool steam_total_games_find_pending{};
+	bool steam_total_games_upload_pending{};
+	SteamLeaderboard_t steam_total_wins_leaderboard{};
+	CCallResult<Game, LeaderboardFindResult_t> steam_total_wins_find_call;
+	CCallResult<Game, LeaderboardScoreUploaded_t> steam_total_wins_upload_call;
+	int32_t steam_pending_total_wins_score{ -1 };
+	int32_t steam_total_wins_last_uploaded_score{ -1 };
+	bool steam_total_wins_find_pending{};
+	bool steam_total_wins_upload_pending{};
+	SteamLeaderboard_t steam_win_rate_leaderboard{};
+	CCallResult<Game, LeaderboardFindResult_t> steam_win_rate_find_call;
+	CCallResult<Game, LeaderboardScoreUploaded_t> steam_win_rate_upload_call;
+	int32_t steam_pending_win_rate_score{ -1 };
+	int32_t steam_win_rate_last_uploaded_score{ -1 };
+	bool steam_win_rate_find_pending{};
+	bool steam_win_rate_upload_pending{};
 #endif
 
 	bool is_building{};

@@ -50,6 +50,12 @@
   - `Game::TryGetSteamStatInt(const char* stat_id, int32_t& out_value)`：通用读取封装，返回值表示是否成功获取。
   - `Game::GetSteamTotalGamesPlayed(int32_t& out_total_games)`、`Game::GetSteamTotalWins(int32_t& out_total_wins)`：分别返回上述两个统计的当前值。
 - 调用查询接口前需确认 `steam_sdk_available`，并避免在 Steam 客户端离线或尚未同步完成时将结果当作最终值（可与 `TryUnlockPendingSteamAchievements()` 搭配重试逻辑）。
+- Steam 排行榜同步：
+  - `TotalGamesPlayedLeaderboard`：上传整数形式的总对战场次；
+  - `TotalWinsLeaderboard`：上传整数形式的胜场；
+  - `WinRateLeaderboard`：上传四舍五入后的整数胜率（例：50% → 50，仅当总场次 ≥ 100 时才会更新）。
+  三个榜单会在对局结束或打开卡组编辑界面时触发同步，需要在 Steamworks 后台预先创建对应名字的排行榜或允许自动创建。
+- 卡组编辑界面的副卡组区域现用于展示 `胜场 / 总场 / 胜率` 三项 Steam 统计，仅在 `steam_sdk_available == true` 且客户端提供数据时渲染。
 
 ## 编译配置
 
