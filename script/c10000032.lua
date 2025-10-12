@@ -5,6 +5,7 @@ function s.initial(c)
 	local e1=Effect.CreateEffect(c)
 	e1:SetType(EFFECT_TYPE_ACTIVATE)
 	e1:SetCode(EVENT_FREE_CHAIN)
+	e1:SetCost(s.actcost)
 	c:RegisterEffect(e1)
 	--永续魔法卡，自己特殊召唤等级3以下的怪兽时发动，抽1张卡。
 	local e2=Effect.CreateEffect(c)
@@ -18,6 +19,11 @@ function s.initial(c)
 	e2:SetTarget(s.drtg)
 	e2:SetOperation(s.drop)
 	c:RegisterEffect(e2)
+end
+-- 发动时消耗3补给
+function s.actcost(e,tp,eg,ep,ev,re,r,rp,chk)
+	if chk==0 then return Duel.CheckSupplyCost(tp, 3) end
+	Duel.PaySupplyCost(tp, 3)
 end
 function s.cfilter(c,tp)
 	return c:IsSummonPlayer(tp) and c:IsLevelBelow(3)
