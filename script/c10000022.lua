@@ -1,15 +1,20 @@
 --钨棒打击
 local s, id = Import()
 function s.initial(c)
-	--魔法卡，以场上1个等级5以上的怪兽为对象才能发动，将其破坏。
+	--魔法卡，5补给，以场上1个等级5以上的怪兽为对象才能发动，将其破坏。
 	local e1=Effect.CreateEffect(c)
 	e1:SetCategory(CATEGORY_DESTROY)
 	e1:SetType(EFFECT_TYPE_ACTIVATE)
 	e1:SetCode(EVENT_FREE_CHAIN)
 	e1:SetProperty(EFFECT_FLAG_CARD_TARGET)
+	e1:SetCost(s.cost)
 	e1:SetTarget(s.target)
 	e1:SetOperation(s.activate)
 	c:RegisterEffect(e1)
+end
+function s.cost(e,tp,eg,ep,ev,re,r,rp,chk)
+	if chk==0 then return Duel.CheckSupplyCost(tp,5) end
+	Duel.PaySupplyCost(tp,5)
 end
 
 function s.filter(c)
