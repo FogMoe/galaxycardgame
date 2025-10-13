@@ -65,7 +65,8 @@
 > 其他 `RACE_*` 目前无 Galaxy 别名（例如机械、龙族、魔法师等），可继续使用原称。
 
 ### 2.3 自定义效果码
-- `EFFECT_RUSH (500)`：部署回合即可攻击 - Rush
+- `EFFECT_RUSH (500)`：部署回合即可攻击(跃迁) - Rush
+- `EFFECT_RUSH_R (509)`：闪击（部署回合可攻击但不能直击） - Rush R
 - `EFFECT_PROTECT (501)`：保护/嘲讽 - Protect
 - `EFFECT_SHIELD (502)`：护盾，抵挡一次伤害 - Shield
 - `EFFECT_SHIELD_HINT (503)`：护盾 UI 提示（由系统自动注册） - Shield Hint

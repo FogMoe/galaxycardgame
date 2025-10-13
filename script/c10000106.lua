@@ -1,4 +1,4 @@
---：装备限定机械单位，发动时消耗1补给，并赋予交战阶段可攻击2次的能力。
+--：装备限定机械单位，发动时消耗2补给，并赋予交战阶段可攻击2次的能力。
 local s,id=Import()
 
 function s.initial(c)
@@ -24,8 +24,8 @@ function s.initial(c)
 end
 
 function s.cost(e,tp,eg,ep,ev,re,r,rp,chk)
-    if chk==0 then return Duel.CheckSupplyCost(tp,1) end
-    Duel.PaySupplyCost(tp,1)
+    if chk==0 then return Duel.CheckSupplyCost(tp,2) end
+    Duel.PaySupplyCost(tp,2)
 end
 
 function s.filter(c)
