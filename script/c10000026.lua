@@ -6,9 +6,16 @@ function s.initial(c)
 	e1:SetCategory(CATEGORY_SPECIAL_SUMMON)
 	e1:SetType(EFFECT_TYPE_ACTIVATE)
 	e1:SetCode(EVENT_FREE_CHAIN)
+	--消耗5点影响力
+	e1:SetCost(s.cost)
 	e1:SetTarget(s.target)
 	e1:SetOperation(s.activate)
 	c:RegisterEffect(e1)
+end
+
+function s.cost(e,tp,eg,ep,ev,re,r,rp,chk)
+	if chk==0 then return Duel.CheckLPCost(tp,5) end
+	Duel.PayLPCost(tp,5)
 end
 
 function s.filter(c,e,tp)
