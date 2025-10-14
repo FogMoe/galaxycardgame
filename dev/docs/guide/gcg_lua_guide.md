@@ -45,8 +45,20 @@
   Duel.AddSupply(tp, n)        -- 增加当前补给，可超过上限
   Duel.AddMaxSupply(tp, n)     -- 永久提升上限
   Duel.CheckSupplyCost(tp, n)  -- 是否支付得起
-  Duel.PaySupplyCost(tp, n)    -- 扣除补给
+  Duel.PaySupplyCost(tp, n)    -- 扣除补给（推荐用于成本支付）
+  Duel.SpendSupply(tp, n)      -- 扣除补给（通用花费，见下方说明）
   ```
+- **`PaySupplyCost` vs `SpendSupply` 的区别**：
+  - **`Duel.PaySupplyCost(tp, cost)`**：
+    - 参数类型：整数 (`lua_tointeger`)
+    - 拒绝 0 或负数：`cost <= 0` 时直接返回，不执行任何操作
+    - 语义：规范的"支付成本"，用于卡片激活 cost
+    - **推荐使用**：项目中所有 cost 函数均使用此 API
+  - **`Duel.SpendSupply(tp, amount)`**：
+    - 参数类型：数值 (`lua_tonumber`，可接受浮点数）
+    - 允许任意值：没有 0 或负数检查
+    - 语义：通用的"花费补给"，适用于效果操作中的灵活补给扣除
+    - 使用场景：非 cost 的补给消耗（如"消耗全部补给"的效果）
 - **费用写法模板**：
   ```lua
   function s.cost(e,tp,eg,ep,ev,re,r,rp,chk)
