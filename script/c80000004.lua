@@ -55,10 +55,10 @@ function s.activate(e,tp,eg,ep,ev,re,r,rp)
 		local ft=Duel.GetLocationCount(tp,GALAXY_LOCATION_UNIT_ZONE)
 		if ft>damage_count then ft=damage_count end
 		if ft<=0 then return end
-		if not Duel.IsPlayerCanSpecialSummonMonster(tp,10000143,0,TYPES_TOKEN_MONSTER,1,1,1,0,0) then return end
+		if not Duel.IsPlayerCanSpecialSummonMonster(tp,80000003,0,TYPES_TOKEN_MONSTER,1,1,1,0,0) then return end
 
 		for i=1,ft do
-			local token=Duel.CreateToken(tp,10000143)
+			local token=Duel.CreateToken(tp,80000003)
 			Duel.SpecialSummonStep(token,0,tp,tp,false,false,POS_FACEUP_ATTACK)
 		end
 		Duel.SpecialSummonComplete()

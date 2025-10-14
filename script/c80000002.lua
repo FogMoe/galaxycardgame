@@ -52,10 +52,10 @@ end
 -- 效果2的操作：制造并部署幼小爬虫
 function s.spop(e,tp,eg,ep,ev,re,r,rp)
 	if Duel.GetLocationCount(tp,GALAXY_LOCATION_UNIT_ZONE)<=0 then return end
-	if not Duel.IsPlayerCanSpecialSummonMonster(tp,10000143,0,TYPES_TOKEN_MONSTER,1,1,1,0,0) then return end
+	if not Duel.IsPlayerCanSpecialSummonMonster(tp,80000003,0,TYPES_TOKEN_MONSTER,1,1,1,0,0) then return end
 
 	-- 创建幼小爬虫衍生物
-	local token=Duel.CreateToken(tp,10000143)
+	local token=Duel.CreateToken(tp,80000003)
 	if token then
 		Duel.SpecialSummon(token,0,tp,tp,false,false,POS_FACEUP_ATTACK)
 	end
