@@ -5,12 +5,13 @@ function s.initial(c)
 	local e1=Effect.CreateEffect(c)
 	e1:SetType(EFFECT_TYPE_ACTIVATE)
 	e1:SetCode(EVENT_FREE_CHAIN)
+	e1:SetCost(s.actcost)
 	c:RegisterEffect(e1)
 	--永续支援卡，1回合1次，自己战备阶段开始时必发，额外获得1点补给
 	local e2=Effect.CreateEffect(c)
 	e2:SetDescription(aux.Stringid(id,0))
 	--e2:SetCategory(CATEGORY_RECOVER)  --原版：回复影响力用
-	e2:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_TRIGGER_O)
+	e2:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_TRIGGER_F)
 	e2:SetRange(LOCATION_SZONE)
 	e2:SetCode(EVENT_PHASE+PHASE_DRAW)
 	e2:SetCountLimit(1)
@@ -18,7 +19,11 @@ function s.initial(c)
 	e2:SetOperation(s.supop)  --新版：获得补给
 	c:RegisterEffect(e2)
 end
-
+-- 发动时消耗2补给
+function s.actcost(e,tp,eg,ep,ev,re,r,rp,chk)
+	if chk==0 then return Duel.CheckSupplyCost(tp, 2) end
+	Duel.PaySupplyCost(tp, 2)
+end
 function s.reccon(e,tp,eg,ep,ev,re,r,rp)
 	return Duel.GetTurnPlayer()==tp
 end
