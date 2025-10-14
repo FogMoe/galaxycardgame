@@ -2311,6 +2311,7 @@ function Galaxy.PlayerRule(c)
 	e5:SetCondition(Galaxy.FirstTurnTokenCondition)
 	e5:SetOperation(Galaxy.FirstTurnTokenOperation)
 	Duel.RegisterEffect(e5, 0)
+	--开局规则
 	--检测到双方卡组里如果有10000101则将它从双方卡组中分别特殊召唤出来
 	local e6 = Effect.CreateEffect(c)
 	e6:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
@@ -2320,35 +2321,113 @@ function Galaxy.PlayerRule(c)
 	Duel.RegisterEffect(e6, 0)
 end
 
--- 检查双方卡组中是否有c10000101
+-- 检查双方卡组中是否有c10000101或c10000145
 function Galaxy.CheckDeckForStart(e,tp,eg,ep,ev,re,r,rp)
 	return Duel.GetTurnCount()==1 and
-		   (Duel.IsExistingMatchingCard(Card.IsCode,0,LOCATION_EXTRA,0,1,nil,10000101) or
-		    Duel.IsExistingMatchingCard(Card.IsCode,1,LOCATION_EXTRA,0,1,nil,10000101))
+		   (Duel.IsExistingMatchingCard(Card.IsCode,0,LOCATION_EXTRA,0,1,nil,10000101,10000145) or
+		    Duel.IsExistingMatchingCard(Card.IsCode,1,LOCATION_EXTRA,0,1,nil,10000101,10000145))
 end
 
--- 从双方卡组中特殊召唤c10000101
+-- 从双方卡组中展示c10000145和特殊召唤c10000101
 function Galaxy.SummonForStart(e,tp,eg,ep,ev,re,r,rp)
-	-- 检查并召唤玩家0的
+	-- 优先处理：检查玩家0的c10000145（人类创世方舟）- 仅展示不召唤
+	local g0_ark = Duel.GetMatchingGroup(Card.IsCode,0,LOCATION_EXTRA,0,nil,10000145)
+	if g0_ark:GetCount()>0 then
+		local tc = g0_ark:GetFirst()
+		-- 展示创世方舟给双方
+		Duel.ConfirmCards(0,tc)
+		Duel.Hint(HINT_CARD,0,tc:GetCode())
+		-- 制造10张星际宣言（10000144）洗入主卡组，并展示给对手
+		local tokens = Group.CreateGroup()
+		for i=1,10 do
+			local token = Duel.CreateToken(0,10000144)
+			tokens:AddCard(token)
+		end
+		-- 展示制造的星际宣言
+		Duel.ConfirmCards(0,tokens)
+		Duel.SendtoDeck(tokens,nil,SEQ_DECKSHUFFLE,REASON_EFFECT)
+		-- 限制只能部署人类单位（全局效果，不叠加）
+		if not Duel.IsPlayerAffectedByEffect(0,EFFECT_CANNOT_SPECIAL_SUMMON) then
+			local e_restrict = Effect.CreateEffect(tc)
+			e_restrict:SetType(EFFECT_TYPE_FIELD)
+			e_restrict:SetCode(EFFECT_CANNOT_SPECIAL_SUMMON)
+			e_restrict:SetProperty(EFFECT_FLAG_PLAYER_TARGET)
+			e_restrict:SetTargetRange(1,0)
+			e_restrict:SetTarget(function(e,c)
+				return c:IsType(GALAXY_TYPE_UNIT) and not c:IsGalaxyCategory(GALAXY_CATEGORY_HUMAN)
+			end)
+			Duel.RegisterEffect(e_restrict,0)
+		end
+		-- 跳过下次自己的部署阶段
+		local e_skip=Effect.CreateEffect(tc)
+		e_skip:SetType(EFFECT_TYPE_FIELD)
+		e_skip:SetProperty(EFFECT_FLAG_PLAYER_TARGET)
+		e_skip:SetTargetRange(1,0)
+		e_skip:SetCode(EFFECT_SKIP_M1)
+		e_skip:SetReset(RESET_PHASE+PHASE_MAIN1+RESET_SELF_TURN)
+		Duel.RegisterEffect(e_skip,0)
+	end
+
+	-- 优先处理：检查玩家1的c10000145（人类创世方舟）- 仅展示不召唤
+	local g1_ark = Duel.GetMatchingGroup(Card.IsCode,1,LOCATION_EXTRA,0,nil,10000145)
+	if g1_ark:GetCount()>0 then
+		local tc = g1_ark:GetFirst()
+		-- 展示创世方舟给双方
+		Duel.ConfirmCards(1,tc)
+		Duel.Hint(HINT_CARD,1,tc:GetCode())
+		-- 制造10张星际宣言（10000144）洗入主卡组，并展示给对手
+		local tokens = Group.CreateGroup()
+		for i=1,10 do
+			local token = Duel.CreateToken(1,10000144)
+			tokens:AddCard(token)
+		end
+		-- 展示制造的星际宣言
+		Duel.ConfirmCards(1,tokens)
+		Duel.SendtoDeck(tokens,nil,SEQ_DECKSHUFFLE,REASON_EFFECT)
+		-- 限制只能部署人类单位（全局效果，不叠加）
+		if not Duel.IsPlayerAffectedByEffect(1,EFFECT_CANNOT_SPECIAL_SUMMON) then
+			local e_restrict = Effect.CreateEffect(tc)
+			e_restrict:SetType(EFFECT_TYPE_FIELD)
+			e_restrict:SetCode(EFFECT_CANNOT_SPECIAL_SUMMON)
+			e_restrict:SetProperty(EFFECT_FLAG_PLAYER_TARGET)
+			e_restrict:SetTargetRange(1,0)
+			e_restrict:SetTarget(function(e,c)
+				return c:IsType(GALAXY_TYPE_UNIT) and not c:IsGalaxyCategory(GALAXY_CATEGORY_HUMAN)
+			end)
+			Duel.RegisterEffect(e_restrict,1)
+		end
+		-- 跳过下次自己的部署阶段
+		local e_skip=Effect.CreateEffect(tc)
+		e_skip:SetType(EFFECT_TYPE_FIELD)
+		e_skip:SetProperty(EFFECT_FLAG_PLAYER_TARGET)
+		e_skip:SetTargetRange(1,0)
+		e_skip:SetCode(EFFECT_SKIP_M1)
+		e_skip:SetReset(RESET_PHASE+PHASE_MAIN1+RESET_SELF_TURN)
+		Duel.RegisterEffect(e_skip,1)
+	end
+
+	-- 然后处理：检查并召唤玩家0的c10000101
 	local g0 = Duel.GetMatchingGroup(Card.IsCode,0,LOCATION_EXTRA,0,nil,10000101)
 	if g0:GetCount()>0 and Duel.GetLocationCount(0,LOCATION_MZONE)>0 then
 		local tc = g0:GetFirst()
 		Duel.ConfirmCards(0,tc)
 		Duel.Hint(HINT_CARD,0,tc:GetCode())
 		Duel.SpecialSummon(tc,0,0,0,false,false,POS_FACEUP_ATTACK)
-		--给对手增加5lp(set)
-		Duel.SetLP(1,Duel.GetLP(1)+5)
+		--给对手增加10lp(set)
+		Duel.SetLP(1,Duel.GetLP(1)+10)
 	end
-	-- 检查并召唤玩家1的
+
+	-- 然后处理：检查并召唤玩家1的c10000101
 	local g1 = Duel.GetMatchingGroup(Card.IsCode,1,LOCATION_EXTRA,0,nil,10000101)
 	if g1:GetCount()>0 and Duel.GetLocationCount(1,LOCATION_MZONE)>0 then
 		local tc = g1:GetFirst()
 		Duel.ConfirmCards(1,tc)
 		Duel.Hint(HINT_CARD,1,tc:GetCode())
 		Duel.SpecialSummon(tc,0,1,1,false,false,POS_FACEUP_ATTACK)
-		--给对手增加5lp(set)
-		Duel.SetLP(0,Duel.GetLP(0)+5)
+		--给对手增加10lp(set)
+		Duel.SetLP(0,Duel.GetLP(0)+10)
 	end
+
 	--如果有任意玩家携带了c10000101则双方玩家在本局中抽牌阶段额外抽1张卡，只能生效1个。
 	if (g0:GetCount()>0 or g1:GetCount()>0) then
 		-- 注册全局持续被动效果：双方玩家抽卡阶段额外抽1张卡
