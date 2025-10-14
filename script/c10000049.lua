@@ -1,13 +1,22 @@
 --虚空利维坦
---在部署的回合就可以攻击。
---当你部署其他节肢类单位时，获得+1/+1。
+--自己场上只有节肢类单位才能部署。
+--在部署的回合就可以直接攻击。
+--当你部署节肢类单位时，获得+1/+1。
 local s, id = Import()
 function s.initial(c)
-	--冲锋能力
+	--召唤限制：场上只有节肢类单位才能部署
 	local e1=Effect.CreateEffect(c)
 	e1:SetType(EFFECT_TYPE_SINGLE)
-	e1:SetCode(EFFECT_RUSH)
+	e1:SetProperty(EFFECT_FLAG_CANNOT_DISABLE+EFFECT_FLAG_UNCOPYABLE)
+	e1:SetCode(EFFECT_SPSUMMON_CONDITION)
+	e1:SetCondition(s.spcon)
 	c:RegisterEffect(e1)
+
+	--冲锋能力
+	local e2=Effect.CreateEffect(c)
+	e2:SetType(EFFECT_TYPE_SINGLE)
+	e2:SetCode(EFFECT_RUSH)
+	c:RegisterEffect(e2)
 
 	--节肢类单位部署时获得+1/+1
 	local e3=Effect.CreateEffect(c)
@@ -19,6 +28,26 @@ function s.initial(c)
 	e3:SetCondition(s.atkcon)
 	e3:SetOperation(s.atkop)
 	c:RegisterEffect(e3)
+end
+
+--召唤限制条件：场上只有节肢类单位（且至少1个）
+function s.spcon(e)
+	local tp = e:GetHandlerPlayer()
+	local g = Duel.GetFieldGroup(tp,LOCATION_MZONE,0)
+	-- 场上没有单位时不能部署
+	if g:GetCount() == 0 then return false end
+	-- 必须至少有1个节肢类单位，且不能有非节肢类单位
+	return g:IsExists(s.arthropodfilter,1,nil) and not g:IsExists(s.notarthropodfilter,1,nil)
+end
+
+--过滤节肢类单位
+function s.arthropodfilter(c)
+	return c:IsGalaxyCategory(GALAXY_CATEGORY_ARTHROPOD)
+end
+
+--过滤非节肢类单位
+function s.notarthropodfilter(c)
+	return not c:IsGalaxyCategory(GALAXY_CATEGORY_ARTHROPOD)
 end
 
 function s.filter(c,tp)
