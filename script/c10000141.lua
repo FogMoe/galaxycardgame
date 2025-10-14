@@ -82,7 +82,7 @@ function s.operation(e,tp,eg,ep,ev,re,r,rp)
 
 		-- 护盾提示
 		local e6=Effect.CreateEffect(c)
-		e6:SetDescription(aux.Stringid(10000077,2,))
+		e6:SetDescription(aux.Stringid(10000077,2))
 		e6:SetType(EFFECT_TYPE_SINGLE)
 		e6:SetProperty(EFFECT_FLAG_SINGLE_RANGE+EFFECT_FLAG_CLIENT_HINT)
 		e6:SetRange(GALAXY_LOCATION_UNIT_ZONE)
