@@ -5,12 +5,13 @@ Debug.SetAIName("人类叛军 Human rebels")
 Debug.ReloadFieldBegin(DUEL_ATTACK_FIRST_TURN + DUEL_SIMPLE_AI, 2)
 
 Debug.SetPlayerInfo(0, 10, 0, 0)
-Debug.SetPlayerInfo(1, 7, 0, 0)
+Debug.SetPlayerInfo(1, 5, 0, 0)
 Duel.SetSupply(0, 6, 6)
 Duel.SetSupply(1, 5, 5)
 
 -- 我方场地：补给线（持续支援，用于教学抽牌）
 Debug.AddCard(10000032, 0, 0, LOCATION_SZONE, 1, POS_FACEUP)
+Debug.AddCard(10000032, 0, 0, LOCATION_SZONE, 0, POS_FACEUP)
 
 -- 我方手牌：太阳系先锋（Rush 单位，部署后可立即攻击）
 Debug.AddCard(10000002, 0, 0, LOCATION_HAND, 0, POS_FACEDOWN)

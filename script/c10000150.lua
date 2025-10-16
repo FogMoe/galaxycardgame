@@ -1,5 +1,5 @@
 --星际同盟协定
---支援卡：卡组中同时有人类、机械类和节肢类单位时，消耗2点补给，增加1点补给上限。
+--支援卡：卡组中同时有人类、机械类和节肢类单位时，消耗3点补给，增加1点补给上限。
 
 local s,id=Import()
 
@@ -15,10 +15,10 @@ function s.initial(c)
 	c:RegisterEffect(e1)
 end
 
--- 消耗2点补给
+-- 消耗3点补给
 function s.cost(e,tp,eg,ep,ev,re,r,rp,chk)
-	if chk==0 then return Duel.CheckSupplyCost(tp,2) end
-	Duel.PaySupplyCost(tp,2)
+	if chk==0 then return Duel.CheckSupplyCost(tp,3) end
+	Duel.PaySupplyCost(tp,3)
 end
 
 -- 激活条件：卡组中同时有人类、机械类、节肢类单位
