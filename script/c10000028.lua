@@ -1,7 +1,7 @@
 --精确打击
 local s, id = Import()
 function s.initial(c)
-	--对对手直接造成4点lp伤害
+	--对对手直接造成3点lp伤害
 	local e1=Effect.CreateEffect(c)
 	e1:SetType(EFFECT_TYPE_ACTIVATE)
 	e1:SetCategory(CATEGORY_DAMAGE)
@@ -19,8 +19,8 @@ end
 function s.target(e,tp,eg,ep,ev,re,r,rp,chk)
 	if chk==0 then return true end
 	Duel.SetTargetPlayer(1-tp)
-	Duel.SetTargetParam(4)
-	Duel.SetOperationInfo(0,CATEGORY_DAMAGE,nil,0,1-tp,4)
+	Duel.SetTargetParam(3)
+	Duel.SetOperationInfo(0,CATEGORY_DAMAGE,nil,0,1-tp,3)
 end
 function s.activate(e,tp,eg,ep,ev,re,r,rp)
 	local p,d=Duel.GetChainInfo(0,CHAININFO_TARGET_PLAYER,CHAININFO_TARGET_PARAM)
