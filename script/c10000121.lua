@@ -7,6 +7,7 @@ function s.initial(c)
 	local e0=Effect.CreateEffect(c)
 	e0:SetType(EFFECT_TYPE_ACTIVATE)
 	e0:SetCode(EVENT_FREE_CHAIN)
+	e0:SetCost(s.actcost)
 	c:RegisterEffect(e0)
 
 	--植物类单位部署时，获得+1/+1
@@ -32,6 +33,10 @@ function s.initial(c)
 	e2:SetTarget(s.thtg)
 	e2:SetOperation(s.thop)
 	c:RegisterEffect(e2)
+end
+function s.actcost(e,tp,eg,ep,ev,re,r,rp,chk)
+	if chk==0 then return Duel.CheckSupplyCost(tp, 2) end
+	Duel.PaySupplyCost(tp, 2)
 end
 
 --植物类单位过滤器（双方通用）
