@@ -2178,15 +2178,14 @@ function Galaxy.CalculateHp(e,tp,eg,ep,ev,re,r,rp)
 		-- 应用最大生命值变化
 		hp_max_now = hp_max_now + effect_delta
 
-		-- EFFECT_UPDATE_HP分离机制：
+		-- EFFECT_UPDATE_HP 分离机制：
 		-- 1. 最大生命值变化总是应用
-		-- 2. 当前生命值只在效果增加时立即增加
-		-- 3. 效果减少时不强制减少当前生命值，除非超过新上限
-		if effect_delta > 0 then
-			-- 获得增益：当前生命值立即增加相同数值
-			now_hp = now_hp + effect_delta
+		-- 2. 当前生命值同步按照增益/减益变化
+		-- 3. 钳制逻辑仍在后续安全检查中处理
+		now_hp = now_hp + effect_delta
+		if now_hp < 0 then
+			now_hp = 0
 		end
-		-- 失去增益：当前生命值保持不变，只有超过新上限时才会被调整
 
 		-- 触发EFFECT_UPDATE_HP变化事件
 		Galaxy.RaiseHpEvent(c, effect_delta, true, REASON_EFFECT, rp or 0)
@@ -2454,7 +2453,26 @@ function Galaxy.FirstTurnTokenCondition(e,tp,eg,ep,ev,re,r,rp)
 	return Duel.GetCurrentPhase() == PHASE_DRAW and Duel.GetFieldGroupCount(1,LOCATION_DECK,0) > 0
 end
 
+-- 开局重抽：允许双方各自将任意数量的手牌洗回并抽取相同数量的卡
+function Galaxy.OpeningMulligan(player)
+	local hand_cards = Duel.GetFieldGroup(player, LOCATION_HAND, 0)
+	if hand_cards:GetCount() == 0 then return end
+	local max_returnable = hand_cards:FilterCount(Card.IsAbleToDeck, nil)
+	if max_returnable == 0 then return end
+	Duel.Hint(HINT_SELECTMSG, player, HINTMSG_TODECK)
+	local to_deck = Duel.SelectMatchingCard(player, Card.IsAbleToDeck, player, LOCATION_HAND, 0, 0, max_returnable, nil)
+	local ct = to_deck:GetCount()
+	if ct == 0 then return end
+	Duel.SendtoDeck(to_deck, nil, SEQ_DECKSHUFFLE, REASON_RULE)
+	Duel.ShuffleDeck(player)
+	Duel.BreakEffect()
+	Duel.Draw(player, ct, REASON_RULE)
+end
+
 function Galaxy.FirstTurnTokenOperation(e,tp,eg,ep,ev,re,r,rp)
+	-- 在给予后攻玩家能量电池前，为双方提供一次开局重抽机会
+	Galaxy.OpeningMulligan(0)
+	Galaxy.OpeningMulligan(1)
 	--为后攻玩家(1)在手牌中创建 一次性能量电池(99999999)
 	local c = Duel.CreateToken(1,99999999)
 	Duel.SendtoHand(c, 1, REASON_RULE)

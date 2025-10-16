@@ -1,5 +1,5 @@
 --火力打击
---支援卡：消耗2点补给，自己场上有机械类单位时可以使用，对全体敌方单位造成2点伤害。
+--支援卡：消耗4点补给，自己场上有机械类单位时可以使用，对全体敌方单位造成2点伤害。
 
 local s,id=Import()
 
@@ -17,10 +17,10 @@ function s.initial(c)
 	c:RegisterEffect(e1)
 end
 
--- 消耗2点补给
+-- 消耗4点补给
 function s.cost(e,tp,eg,ep,ev,re,r,rp,chk)
-	if chk==0 then return Duel.CheckSupplyCost(tp,2) end
-	Duel.PaySupplyCost(tp,2)
+	if chk==0 then return Duel.CheckSupplyCost(tp,4) end
+	Duel.PaySupplyCost(tp,4)
 end
 
 -- 自己场上有机械类单位
