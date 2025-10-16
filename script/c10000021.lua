@@ -1,7 +1,7 @@
 --轨道突击兵
 local s, id = Import()
 function s.initial(c)
-	--这个怪兽攻击宣言时发动增加1def。
+	--这个怪兽攻击宣言时发动增加2def。
 	local e1=Effect.CreateEffect(c)
 	e1:SetDescription(aux.Stringid(id,0))
 	e1:SetCategory(CATEGORY_DEFCHANGE)
@@ -18,7 +18,7 @@ function s.defop(e,tp,eg,ep,ev,re,r,rp)
 		e1:SetType(EFFECT_TYPE_SINGLE)
 		e1:SetCode(EFFECT_UPDATE_HP)
 		e1:SetReset(RESET_EVENT+RESETS_STANDARD)
-		e1:SetValue(1)
+		e1:SetValue(2)
 		c:RegisterEffect(e1)
 	end
 end

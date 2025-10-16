@@ -1,7 +1,7 @@
 --焦土策略
 local s, id = Import()
 function s.initial(c)
-	--通常魔法，支付8点补给，最多选择对方场上4个怪兽为对象才能发动，那些怪兽破坏，直到下个回合结束那些怪兽存在的位置不能使用。
+	--通常魔法，支付9点补给，最多选择对方场上4个怪兽为对象才能发动，那些怪兽破坏，直到下个回合结束那些怪兽存在的位置不能使用。
 	local e1=Effect.CreateEffect(c)
 	e1:SetCategory(CATEGORY_DESTROY)
 	e1:SetType(EFFECT_TYPE_ACTIVATE)
@@ -13,8 +13,8 @@ function s.initial(c)
 	c:RegisterEffect(e1)
 end
 function s.cost(e,tp,eg,ep,ev,re,r,rp,chk)
-	if chk==0 then return Duel.CheckSupplyCost(tp,8) end
-	Duel.PaySupplyCost(tp,8)
+	if chk==0 then return Duel.CheckSupplyCost(tp,9) end
+	Duel.PaySupplyCost(tp,9)
 end
 function s.target(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
 	if chkc then return chkc:IsControler(1-tp) and chkc:IsLocation(LOCATION_MZONE) end

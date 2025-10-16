@@ -1,5 +1,5 @@
 --生物质汲取
---支援卡，消耗2点补给，破坏一个友方节肢类单位，抽取等同于其生命值张数的卡（最多4张）。
+--支援卡，消耗3点补给，破坏一个友方节肢类单位，抽取等同于其生命值张数的卡（最多4张）。
 local s, id = Import()
 function s.initial(c)
 	--激活效果
@@ -20,9 +20,9 @@ function s.filter(c)
 end
 
 function s.cost(e,tp,eg,ep,ev,re,r,rp,chk)
-	if chk==0 then return Duel.CheckSupplyCost(tp,2)
+	if chk==0 then return Duel.CheckSupplyCost(tp,3)
 		and Duel.IsExistingMatchingCard(s.filter,tp,GALAXY_LOCATION_UNIT_ZONE,0,1,nil) end
-	Duel.PaySupplyCost(tp,2)
+	Duel.PaySupplyCost(tp,3)
 end
 
 function s.target(e,tp,eg,ep,ev,re,r,rp,chk,chkc)

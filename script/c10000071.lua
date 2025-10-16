@@ -10,7 +10,7 @@ function s.initial(c)
 	e1:SetTarget(s.drawtg)
 	e1:SetOperation(s.drawop)
 	c:RegisterEffect(e1)
-	--战斗后，获得+2生命值（防御力）
+	--战斗后，获得+1生命值（防御力）
 	local e2=Effect.CreateEffect(c)
 	e2:SetDescription(aux.Stringid(id,1))
 	e2:SetCategory(CATEGORY_DEFCHANGE)
@@ -48,7 +48,7 @@ function s.defop(e,tp,eg,ep,ev,re,r,rp)
 		local e1=Effect.CreateEffect(c)
 		e1:SetType(EFFECT_TYPE_SINGLE)
 		e1:SetCode(EFFECT_UPDATE_HP)
-		e1:SetValue(2)
+		e1:SetValue(1)
 		e1:SetReset(RESET_EVENT+RESETS_STANDARD)
 		c:RegisterEffect(e1)
 	end
