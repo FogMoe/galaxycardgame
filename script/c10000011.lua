@@ -1,7 +1,7 @@
 --星际急召
 local s, id = Import()
 function s.initial(c)
-	--cost1费用，抽1张卡，如果你场上没有单位，再抽1张卡。
+	--cost2费用，抽1张卡，如果你场上没有单位，再抽1张卡。
 	local e1=Effect.CreateEffect(c)
 	e1:SetCategory(CATEGORY_DRAW)
 	e1:SetType(EFFECT_TYPE_ACTIVATE)
@@ -12,8 +12,8 @@ function s.initial(c)
 	c:RegisterEffect(e1)
 end
 function s.cost(e,tp,eg,ep,ev,re,r,rp,chk)
-	if chk==0 then return Duel.CheckSupplyCost(tp,1) end
-	Duel.PaySupplyCost(tp,1)
+	if chk==0 then return Duel.CheckSupplyCost(tp,2) end
+	Duel.PaySupplyCost(tp,2)
 end
 function s.target(e,tp,eg,ep,ev,re,r,rp,chk)
 	if chk==0 then return Duel.IsPlayerCanDraw(tp,1) end
