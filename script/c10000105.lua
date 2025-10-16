@@ -10,6 +10,7 @@ function s.initial(c)
     e1:SetCode(EVENT_FREE_CHAIN)
     e1:SetProperty(EFFECT_FLAG_CARD_TARGET)
     e1:SetTarget(s.target)
+    e1:SetCost(s.cost)
     e1:SetOperation(s.activate)
     c:RegisterEffect(e1)
 
@@ -28,7 +29,11 @@ function s.initial(c)
     e3:SetValue(2)
     c:RegisterEffect(e3)
 end
-
+-- 消耗1点补给
+function s.cost(e,tp,eg,ep,ev,re,r,rp,chk)
+	if chk==0 then return Duel.CheckSupplyCost(tp,1) end
+	Duel.PaySupplyCost(tp,1)
+end
 function s.filter(c)
     return c:IsFaceup() and c:IsRace(RACE_MACHINE) and c:IsType(GALAXY_TYPE_UNIT)
 end
