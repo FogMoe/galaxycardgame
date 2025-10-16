@@ -1,4 +1,4 @@
---支援卡：消耗3点补给，随机制造3张补给2以下的军团单位，让玩家选择1张加入手卡，使其获得效果（部署时不消耗补给）。
+--支援卡：消耗3点补给，随机制造3张补给3以下的军团单位，让玩家选择1张加入手卡，使其获得效果（部署时不消耗补给）。
 local s, id = Import()
 
 function s.initial(c)
@@ -30,12 +30,12 @@ function s.fieldfilter(c)
 end
 
 
---随机获取3张不同的军团单位（补给2以下）
+--随机获取3张不同的军团单位（补给3以下）
 function s.get_random_legion_units()
 	local sql = string.format([[
 		SELECT id FROM datas
 		WHERE attribute = %d
-		AND level <= 2
+		AND level <= 3
 		AND type & %d != 0
 		AND type & %d = 0
 		AND id BETWEEN 10000000 AND 99999999

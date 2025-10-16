@@ -1,7 +1,7 @@
 --战略储备
 local s, id = Import()
 function s.initial(c)
-	--消耗2点补给
+	--消耗3点补给
 	--这个回合，自己手卡中等级3以下的怪兽等级下降2点。
 	local e1=Effect.CreateEffect(c)
 	e1:SetType(EFFECT_TYPE_ACTIVATE)
@@ -11,8 +11,8 @@ function s.initial(c)
 	c:RegisterEffect(e1)
 end
 function s.cost(e,tp,eg,ep,ev,re,r,rp,chk)
-	if chk==0 then return Duel.CheckSupplyCost(tp,2) end
-	Duel.PaySupplyCost(tp,2)
+	if chk==0 then return Duel.CheckSupplyCost(tp,3) end
+	Duel.PaySupplyCost(tp,3)
 end
 function s.activate(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()

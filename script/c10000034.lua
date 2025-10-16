@@ -7,8 +7,13 @@ function s.initial(c)
 	e1:SetType(EFFECT_TYPE_ACTIVATE)
 	e1:SetCode(EVENT_FREE_CHAIN)
 	e1:SetOperation(s.activate)
+	e1:SetCost(s.cost)
 	c:RegisterEffect(e1)
 	--手卡发动功能已由Galaxy全局规则提供
+end
+function s.cost(e,tp,eg,ep,ev,re,r,rp,chk)
+	if chk==0 then return Duel.CheckSupplyCost(tp, 3) end
+	Duel.PaySupplyCost(tp, 3)
 end
 function s.activate(e,tp,eg,ep,ev,re,r,rp)
 	local e1=Effect.CreateEffect(e:GetHandler())
