@@ -2,12 +2,12 @@
 --大型舰队
 local s,id=Import()
 function s.initial(c)
-	-- 仅允许通过自身条件特殊召唤
+	-- 特殊召唤限制
 	local e1=Effect.CreateEffect(c)
 	e1:SetType(EFFECT_TYPE_SINGLE)
 	e1:SetProperty(EFFECT_FLAG_CANNOT_DISABLE+EFFECT_FLAG_UNCOPYABLE)
 	e1:SetCode(EFFECT_SPSUMMON_CONDITION)
-	e1:SetCondition(s.splimcon)
+	e1:SetValue(s.splimit)
 	c:RegisterEffect(e1)
 
 	-- 自身部署条件：卡组仅包含植物类单位时可从额外卡组特殊召唤
@@ -41,7 +41,7 @@ function s.initial(c)
 	e4:SetCode(EFFECT_CANNOT_DIRECT_ATTACK)
 	c:RegisterEffect(e4)
 
-	-- 战备阶段：减少补给上限并随机部署高补给单位，赋予闪击
+	-- 战备阶段：减少补给并随机部署高补给单位，赋予闪击
 	local e5=Effect.CreateEffect(c)
 	e5:SetDescription(aux.Stringid(id,1))
 	e5:SetCategory(CATEGORY_SPECIAL_SUMMON)
@@ -63,16 +63,38 @@ function s.nonplantfilter(c)
 	return c:IsType(GALAXY_TYPE_UNIT) and not c:IsRace(RACE_PLANT)
 end
 
--- 判断卡组是否只有植物类单位
+-- 判断卡组和额外卡组是否只有植物类单位
 function s.only_plant_units(tp)
-	local g=Duel.GetMatchingGroup(s.unitfilter,tp,LOCATION_DECK,0,nil)
-	if #g==0 then return false end
-	return not g:IsExists(s.nonplantfilter,1,nil)
+	-- 检查主卡组
+	local deck=Duel.GetMatchingGroup(s.unitfilter,tp,LOCATION_DECK,0,nil)
+	-- 检查额外卡组
+	local extra=Duel.GetMatchingGroup(s.unitfilter,tp,LOCATION_EXTRA,0,nil)
+
+	-- 主卡组或额外卡组中必须至少有一个单位
+	if #deck==0 and #extra==0 then return false end
+
+	-- 主卡组中的单位必须都是植物
+	if deck:IsExists(s.nonplantfilter,1,nil) then return false end
+
+	-- 额外卡组中的单位必须都是植物
+	if extra:IsExists(s.nonplantfilter,1,nil) then return false end
+
+	return true
 end
 
 -- 特殊召唤限制检查
-function s.splimcon(e)
-	return s.only_plant_units(e:GetHandlerPlayer())
+-- se: 触发召唤的效果
+-- sp: 召唤玩家
+-- 如果通过自身的 SPSUMMON_PROC 召唤，检查卡组条件
+-- 如果通过其他效果（如 10000026）召唤，无条件允许
+function s.splimit(e,se,sp,st)
+	-- 如果是通过自身的 SPSUMMON_PROC 召唤（Value = SUMMON_VALUE_SELF）
+	if se and se:GetValue()==SUMMON_VALUE_SELF then
+		-- 需要检查卡组是否只有植物单位
+		return s.only_plant_units(sp)
+	end
+	-- 通过其他效果召唤（如 10000026），无条件允许
+	return true
 end
 
 -- 自身部署条件与操作
@@ -100,7 +122,7 @@ end
 
 -- 战备阶段发动条件
 function s.prepcon(e,tp,eg,ep,ev,re,r,rp)
-	return Duel.GetTurnPlayer()==tp and Duel.GetMaxSupply(tp)>=4
+	return Duel.GetTurnPlayer()==tp and Duel.GetSupply(tp)>=4
 end
 
 -- 查询随机补给>=5的单位ID
@@ -136,14 +158,14 @@ function s.prepop(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
 	if not c or not c:IsRelateToEffect(e) then return end
 	local tp=e:GetHandlerPlayer()
-	if Duel.GetMaxSupply(tp)<3 then return end
+	if Duel.GetSupply(tp)<3 then return end
 	if Duel.GetLocationCount(tp,GALAXY_LOCATION_UNIT_ZONE)<=0 then return end
 	local card_id=e:GetLabel()
 	if card_id==0 then
 		card_id=s.get_random_high_supply_unit()
 		if not card_id then return end
 	end
-	Duel.AddMaxSupply(tp,-3)
+	Duel.SpendSupply(tp,3)
 	local token=Duel.CreateToken(tp,card_id)
 	if not token then return end
 	if Duel.SpecialSummon(token,0,tp,tp,false,false,POS_FACEUP_ATTACK)>0 then
