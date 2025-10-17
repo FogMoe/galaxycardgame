@@ -87,6 +87,8 @@ public:
 	std::vector<code_pointer> results;
 	wchar_t result_string[8]{};
 	std::vector<std::wstring> expansionPacks;
+
+	static constexpr int HOVERED_POS_STEAM_STATS = 5;
 };
 
 }

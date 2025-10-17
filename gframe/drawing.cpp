@@ -1400,6 +1400,14 @@ void Game::DrawDeckBd() {
 			DrawShadowText(textFont, stats_title, Resize(315, 537, 410, 557), Resize(1, 1, 1, 1), 0xffffffff, 0xff000000, false, true);
 			driver->draw2DRectangle(Resize(310, 560, 797, 630), 0x400000ff, 0x400000ff, 0x40000000, 0x40000000);
 			driver->draw2DRectangleOutline(Resize(309, 559, 797, 630));
+			const bool hover_stats = deckBuilder.hovered_pos == DeckBuilder::HOVERED_POS_STEAM_STATS;
+			const irr::u32 hover_color = 0xff66ffff;
+			const irr::u32 normal_color = 0xffffffff;
+			auto stat_color = [&](int index) -> irr::u32 {
+				if(hover_stats && deckBuilder.hovered_seq == index)
+					return hover_color;
+				return normal_color;
+			};
 
 			const wchar_t* wins_text = L"--";
 			wchar_t wins_buf[32];
@@ -1407,8 +1415,9 @@ void Game::DrawDeckBd() {
 				myswprintf(wins_buf, L"%d", total_wins);
 				wins_text = wins_buf;
 			}
-			DrawShadowText(textFont, wins_label, Resize(320, 565, 400, 585), Resize(1, 1, 1, 1), 0xffffffff, 0xff000000, false, true);
-			DrawShadowText(numFont, wins_text, Resize(395, 565, 485, 585), Resize(1, 1, 1, 1), 0xffffffff, 0xff000000, false, true);
+			const irr::u32 wins_color = stat_color(0);
+			DrawShadowText(textFont, wins_label, Resize(320, 565, 400, 585), Resize(1, 1, 1, 1), wins_color, 0xff000000, false, true);
+			DrawShadowText(numFont, wins_text, Resize(395, 565, 485, 585), Resize(1, 1, 1, 1), wins_color, 0xff000000, false, true);
 
 			const wchar_t* total_text = L"--";
 			wchar_t total_buf[32];
@@ -1416,8 +1425,9 @@ void Game::DrawDeckBd() {
 				myswprintf(total_buf, L"%d", total_games);
 				total_text = total_buf;
 			}
-			DrawShadowText(textFont, total_label, Resize(320, 593, 400, 613), Resize(1, 1, 1, 1), 0xffffffff, 0xff000000, false, true);
-			DrawShadowText(numFont, total_text, Resize(395, 593, 485, 613), Resize(1, 1, 1, 1), 0xffffffff, 0xff000000, false, true);
+			const irr::u32 total_color = stat_color(1);
+			DrawShadowText(textFont, total_label, Resize(320, 593, 400, 613), Resize(1, 1, 1, 1), total_color, 0xff000000, false, true);
+			DrawShadowText(numFont, total_text, Resize(395, 593, 485, 613), Resize(1, 1, 1, 1), total_color, 0xff000000, false, true);
 
 			const wchar_t* rate_text = L"--";
 			wchar_t rate_buf[32];
@@ -1427,8 +1437,9 @@ void Game::DrawDeckBd() {
 				myswprintf(rate_buf, L"%d%%", percent);
 				rate_text = rate_buf;
 			}
-			DrawShadowText(textFont, rate_label, Resize(520, 565, 600, 585), Resize(1, 1, 1, 1), 0xffffffff, 0xff000000, false, true);
-			DrawShadowText(numFont, rate_text, Resize(595, 565, 685, 585), Resize(1, 1, 1, 1), 0xffffffff, 0xff000000, false, true);
+			const irr::u32 rate_color = stat_color(2);
+			DrawShadowText(textFont, rate_label, Resize(520, 565, 600, 585), Resize(1, 1, 1, 1), rate_color, 0xff000000, false, true);
+			DrawShadowText(numFont, rate_text, Resize(595, 565, 685, 585), Resize(1, 1, 1, 1), rate_color, 0xff000000, false, true);
 		}
 #endif
 	}

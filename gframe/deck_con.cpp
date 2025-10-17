@@ -9,6 +9,16 @@
 
 namespace ygo {
 
+#ifdef YGOPRO_USE_STEAM_SDK
+namespace {
+constexpr std::array<const char*, 3> kSteamLeaderboardUrls{{
+	"https://steamcommunity.com//stats/4039420/leaderboards/17897454", // Top Wins
+	"https://steamcommunity.com//stats/4039420/leaderboards/17897453", // Top Games
+	"https://steamcommunity.com//stats/4039420/leaderboards/17897312"  // Top Win Rate
+}};
+}
+#endif
+
 static int parse_filter(const wchar_t* pstr, unsigned int* type) {
 	if(*pstr == L'=') {
 		*type = 1;
@@ -1139,6 +1149,16 @@ bool DeckBuilder::OnEvent(const irr::SEvent& event) {
 		case irr::EMIE_LMOUSE_LEFT_UP: {
 			is_starting_dragging = false;
 			irr::gui::IGUIElement* root = mainGame->env->getRootGUIElement();
+#ifdef YGOPRO_USE_STEAM_SDK
+			if(!is_draging && hovered_pos == HOVERED_POS_STEAM_STATS && hovered_seq >= 0 && root->getElementFromPoint(mouse_pos) == root) {
+				const char* overlay_url = nullptr;
+				if(static_cast<size_t>(hovered_seq) < kSteamLeaderboardUrls.size())
+					overlay_url = kSteamLeaderboardUrls[hovered_seq];
+				if(overlay_url && mainGame->steam_sdk_available)
+					mainGame->OpenSteamOverlayToWebPage(overlay_url);
+				break;
+			}
+#endif
 			if(!is_draging && !mainGame->is_siding && root->getElementFromPoint(mouse_pos) == mainGame->imgCard) {
 				ShowBigCard(mainGame->showingcode, 1);
 				break;
@@ -1327,6 +1347,7 @@ void DeckBuilder::GetHoveredCard() {
 	int pre_code = hovered_code;
 	hovered_pos = 0;
 	hovered_code = 0;
+	hovered_seq = -1;
 	irr::gui::IGUIElement* root = mainGame->env->getRootGUIElement();
 	if(root->getElementFromPoint(mouse_pos) != root)
 		return;
@@ -1411,6 +1432,22 @@ void DeckBuilder::GetHoveredCard() {
 				if(x >= 772)
 					is_lastcard = 1;
 			}
+#ifdef YGOPRO_USE_STEAM_SDK
+		} else if(mainGame->steam_sdk_available && y >= 560 && y <= 630) {
+			hovered_pos = HOVERED_POS_STEAM_STATS;
+			const bool in_wins_row = (y >= 562 && y <= 589);
+			const bool in_total_row = (y >= 592 && y <= 619);
+			if(in_wins_row && (x >= 310 && x <= 500))
+				hovered_seq = 0; // 胜场
+			else if(in_total_row && (x >= 310 && x <= 500))
+				hovered_seq = 1; // 总场
+			else if(in_wins_row && (x >= 510 && x <= 700))
+				hovered_seq = 2; // 胜率
+			else {
+				hovered_pos = 0;
+				hovered_seq = -1;
+			}
+#endif
 		}
 	} else if(x >= 810 && x <= 995 && y >= 165 && y <= 626) {
 		hovered_pos = 4;

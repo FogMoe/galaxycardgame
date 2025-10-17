@@ -268,6 +268,7 @@ public:
 	bool TryGetSteamStatInt(const char* stat_id, int32_t& out_value) const;
 	bool GetSteamTotalGamesPlayed(int32_t& out_total_games) const;
 	bool GetSteamTotalWins(int32_t& out_total_wins) const;
+	void OpenSteamOverlayToWebPage(const char* url) const;
 #endif
 	void OnDeckBuilderClosed();
 	void OnLocalPlayerWin();

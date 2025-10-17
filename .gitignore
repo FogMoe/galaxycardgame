@@ -80,6 +80,9 @@ build
 /premake4.exe
 /premake5*
 /premake5.exe
+/GCG.lib
+/GCG.pdb
+/GCG.exp
 
 # others
 *.log

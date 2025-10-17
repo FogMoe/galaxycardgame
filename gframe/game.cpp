@@ -2386,6 +2386,14 @@ bool Game::GetSteamTotalGamesPlayed(int32_t& out_total_games) const {
 bool Game::GetSteamTotalWins(int32_t& out_total_wins) const {
 	return TryGetSteamStatInt("TotalWins", out_total_wins);
 }
+void Game::OpenSteamOverlayToWebPage(const char* url) const {
+	if(!steam_sdk_available || !url || !url[0])
+		return;
+	ISteamFriends* steam_friends = SteamFriends();
+	if(!steam_friends)
+		return;
+	steam_friends->ActivateGameOverlayToWebPage(url);
+}
 void Game::QueueSteamTotalGamesLeaderboardUpdate() {
 	if(!steam_sdk_available)
 		return;
