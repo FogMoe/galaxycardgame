@@ -9,7 +9,7 @@ function s.initial(c)
 	e1:SetType(EFFECT_TYPE_SINGLE)
 	e1:SetProperty(EFFECT_FLAG_CANNOT_DISABLE+EFFECT_FLAG_UNCOPYABLE)
 	e1:SetCode(EFFECT_SPSUMMON_CONDITION)
-	e1:SetCondition(s.spcon)
+	e1:SetValue(s.splimit)
 	c:RegisterEffect(e1)
 
 	--冲锋能力
@@ -31,7 +31,10 @@ function s.initial(c)
 end
 
 --召唤限制条件：场上只有节肢类单位（且至少1个）
-function s.spcon(e)
+function s.splimit(e,se,sp,st)
+	-- se: 触发召唤的效果（如10000026）
+	-- sp: 召唤玩家
+	-- st: 召唤类型
 	local tp = e:GetHandlerPlayer()
 	local g = Duel.GetFieldGroup(tp,LOCATION_MZONE,0)
 	-- 场上没有单位时不能部署
