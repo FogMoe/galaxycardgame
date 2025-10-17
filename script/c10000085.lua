@@ -8,12 +8,18 @@ function s.initial(c)
 	e1:SetCategory(CATEGORY_SPECIAL_SUMMON+CATEGORY_DRAW)
 	e1:SetType(EFFECT_TYPE_SINGLE+EFFECT_TYPE_TRIGGER_F)
 	e1:SetProperty(EFFECT_FLAG_DAMAGE_STEP)
-	e1:SetCode(EVENT_DRAW)
+	e1:SetCode(EVENT_TO_HAND)
 	e1:SetCountLimit(1)
+	e1:SetCondition(s.thcon)
 	e1:SetCost(s.spcost)
 	e1:SetTarget(s.sptg)
 	e1:SetOperation(s.spop)
 	c:RegisterEffect(e1)
+end
+
+-- 条件：仅从卡组加入手牌时触发
+function s.thcon(e,tp,eg,ep,ev,re,r,rp)
+	return e:GetHandler():IsPreviousLocation(LOCATION_DECK)
 end
 
 function s.spcost(e,tp,eg,ep,ev,re,r,rp,chk)
