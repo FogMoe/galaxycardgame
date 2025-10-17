@@ -2279,6 +2279,23 @@ function Galaxy.CalculateAddHpImmediately(c, val, hp, hp_max, reason, effect_pla
 	return hp
 end
 
+-- 立即处理待结算的生命值变化
+function Galaxy.ResolveHpImmediately(group, reason)
+	if not group then return end
+	local reason_flag = reason or REASON_EFFECT
+	for c in aux.Next(group) do
+		Galaxy.ResolveCardHpImmediately(c, reason_flag)
+	end
+end
+
+function Galaxy.ResolveCardHpImmediately(c, reason_flag)
+	if not c then return end
+	local eff = Galaxy.GetHpSystemEffect(c)
+	if not eff then return end
+	local tp = eff:GetHandlerPlayer() or c:GetControler()
+	Galaxy.CalculateHp(eff, tp, nil, tp, 0, nil, reason_flag, tp)
+end
+
 --玩家规则
 function Galaxy.PlayerRule(c)
 	local property = EFFECT_FLAG_CANNOT_DISABLE + EFFECT_FLAG_UNCOPYABLE
@@ -2806,6 +2823,7 @@ function Duel.AddHp(g_c, hp, reason)
 	else
 		error("parameter 3 should be REASON_BATTLE or REASON_EFFECT", 2)
 	end
+	local pending_group = Group.CreateGroup()
 	for c in aux.Next(g_c) do
 		local delta = hp
 		local pending = c:GetFlagEffectLabel(flag)
@@ -2817,6 +2835,13 @@ function Duel.AddHp(g_c, hp, reason)
 		end
 		c:ResetFlagEffect(flag)
 		c:RegisterFlagEffect(flag, RESET_EVENT+RESETS_STANDARD, EFFECT_FLAG_CANNOT_DISABLE, 1, delta)
+		pending_group:AddCard(c)
+	end
+
+	if #pending_group > 0 then
+		-- 直接进行即时结算，确保HP同步
+		Galaxy.ResolveHpImmediately(pending_group, reason)
+		pending_group:DeleteGroup()
 	end
 end
 
