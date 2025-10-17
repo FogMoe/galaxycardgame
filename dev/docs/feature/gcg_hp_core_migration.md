@@ -69,41 +69,29 @@
 
 若短期内无法推进完整的核心化改造，可考虑在现有 Lua 方案上新增一个比 `EVENT_ADJUST` 更早触发的专用事件，使 HP 在 Lua 层也能即时结算。实现要点如下：
 
-1. **内核侧行为参考**
+1. **实现参考**
    - ATK 的即时性来自 `card::get_atk_def()`/`card::get_attack()` 的懒计算：只要读取攻击力，就会重新聚合所有相关效果并写入 `card::temp.attack`，无需等待 `Adjust`。
    - `field::adjust_instant()` 主要用于失效判定和自毁检查，并不决定攻击力数值的生效时机。
 
 2. **事件设计**
-   - 在核心新增常量（暂定 `EVENT_GALAXY_HP_PREUPDATE`），由 `Duel.AddHp` 在写入 `FLAG_ADD_HP_IMMEDIATELY_*` 后立刻触发。
-   - 事件参数：`eg` 为受影响的卡组，`ev` 为目标 HP 变化量的绝对值，`ep`/`ev` 与原伤害事件保持一致，便于重复利用现有监听。
-   - 触发方式示例（C++ 伪码）：
-     ```cpp
-     void Duel::AddHp(Card* c, int32 diff, int32 reason, int32 eff_player) {
-         // 现有 FLAG_ADD_HP_IMMEDIATELY_* 逻辑…
-         Group eg; eg.addcard(c);
-         raise_event(&eg, EVENT_GALAXY_HP_PREUPDATE, nullptr, reason, eff_player, c->current.controler, std::abs(diff));
-         // 后续仍在 Adjust 中执行 Galaxy.CalculateHp，保持兼容。
-     }
-     ```
+   - 预留常量 `GALAXY_EVENT_HP_PREUPDATE`，供未来需要时扩展为真正的预处理事件。
+   - 目前基于引擎限制，Lua 端未直接调用 `Duel.RaiseEvent`，而是改为在 `Duel.AddHp` 内即时结算。
 
 3. **Lua 侧处理**
-   - 在 `Galaxy.PlayerRule` 初始化时注册一个全局监听：
-     ```lua
-     local ge=Effect.GlobalEffect()
-     ge:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_CONTINUOUS)
-     ge:SetCode(EVENT_GALAXY_HP_PREUPDATE)
-     ge:SetOperation(function(_, tp, eg)
-         for tc in aux.Next(eg) do
-             Galaxy.CalculateHp(tc:GetHpEffect(), tp) -- 伪接口，实际调用现有 CalculateHp
-         end
-     end)
-     Duel.RegisterEffect(ge,0)
-     ```
-   - 监听中手动调用 `Galaxy.CalculateHp` 或一个新抽象的 `Galaxy.ResolveHpImmediately(card, responsible_player)`，提前把 Flag 消化为真实 HP 并生成 `GALAXY_EVENT_HP_DAMAGE/RECOVER`。
+   - `Duel.AddHp` 直接调用 `Galaxy.ResolveHpImmediately` / `Galaxy.ResolveCardHpImmediately`，即时执行 `Galaxy.CalculateHp`，提前把 Flag 消化为真实 HP 并生成 `GALAXY_EVENT_HP_DAMAGE/RECOVER`。
 
 4. **兼容性**
    - 原有 `EVENT_ADJUST` 流程保留，以处理错漏场景。
-   - 依靠 `GALAXY_EVENT_HP_DAMAGE` 的卡（如 `c80000002`）将自动在 `EVENT_GALAXY_HP_PREUPDATE` 中完成 HP 刷新与事件抛出，不再需要额外补丁。
-   - 当未来核心化方案落地时，可将该事件实现留作向后兼容或移除。
+   - 依靠 `GALAXY_EVENT_HP_DAMAGE` 的卡（如 `c80000002`）会在即时结算过程中直接获得最新 HP 事件，不再需要额外补丁。
+   - 预留的 `GALAXY_EVENT_HP_PREUPDATE` 常量可在未来核心化或条件允许时启用，以保持扩展空间。
 
-此方案的代码改动量远小于完整核心化：核心只需在 `AddHp` 路径上插入一次事件触发，Lua 侧新增一个全局监听即可。缺点是仍要维护 `FLAG_ADD_HP_IMMEDIATELY_*` 与 `Galaxy.CalculateHp`，但能先解决“HP 晚一拍”导致的脚本问题。
+### 当前实现进度（已完成）
+
+- 预留常量 `GALAXY_EVENT_HP_PREUPDATE`（`script/constant.lua`），作为未来扩展事件的占位符。
+- `Duel.AddHp` 在注册待处理 flag 后立即组装受影响单位，并调用 `Galaxy.ResolveHpImmediately` 做即时结算（不再等待 `EVENT_ADJUST`）。
+- 新增辅助函数：
+  - `Galaxy.ResolveHpImmediately(group, reason)`
+  - `Galaxy.ResolveCardHpImmediately(card, reason)`
+- 原有 `Galaxy.CalculateHp` / `Galaxy.CalculateAddHpImmediately` 重用即可，实现护盾、隐身、致命等逻辑并在同一时点抛出正式 HP 事件。
+
+此方案的代码改动量远小于完整核心化：核心保持不变，仅在 Lua 层扩展事件与即时结算逻辑即可消除“HP 晚一拍”问题。后续若推进核心化，可在此基础上进一步下沉实现。
