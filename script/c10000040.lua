@@ -44,18 +44,19 @@ function s.initial(c)
 end
 
 function s.sptg(e,tp,eg,ep,ev,re,r,rp,chk)
-	if chk==0 then return Duel.GetLocationCount(tp,GALAXY_LOCATION_UNIT_ZONE)>=3
+	if chk==0 then return Duel.GetLocationCount(tp,GALAXY_LOCATION_UNIT_ZONE)>0
 		and Duel.IsPlayerCanSpecialSummonMonster(tp,10000041,0,TYPES_TOKEN_MONSTER,1,1,1,GALAXY_CATEGORY_ARTHROPOD,GALAXY_PROPERTY_LEGION) end
-	Duel.SetOperationInfo(0,CATEGORY_TOKEN,nil,3,0,0)
-	Duel.SetOperationInfo(0,CATEGORY_SPECIAL_SUMMON,nil,3,0,0)
+	local ct=math.min(3,Duel.GetLocationCount(tp,GALAXY_LOCATION_UNIT_ZONE))
+	Duel.SetOperationInfo(0,CATEGORY_TOKEN,nil,ct,0,0)
+	Duel.SetOperationInfo(0,CATEGORY_SPECIAL_SUMMON,nil,ct,0,0)
 end
 
 function s.spop(e,tp,eg,ep,ev,re,r,rp)
 	local ft=Duel.GetLocationCount(tp,GALAXY_LOCATION_UNIT_ZONE)
-	if ft<3 then return end
+	if ft<=0 then return end
 	if not Duel.IsPlayerCanSpecialSummonMonster(tp,10000041,0,TYPES_TOKEN_MONSTER,1,1,1,GALAXY_CATEGORY_ARTHROPOD,GALAXY_PROPERTY_LEGION) then return end
-
-	for i=1,3 do
+	local ct=math.min(3,ft)
+	for i=1,ct do
 		local token=Duel.CreateToken(tp,10000041)
 		if Duel.SpecialSummonStep(token,0,tp,tp,false,false,POS_FACEUP_ATTACK) then
 			-- 下次自己的战备阶段破坏

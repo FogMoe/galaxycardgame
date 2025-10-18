@@ -1,5 +1,5 @@
 --虚空孵化舱 支援卡
---消耗5点补给，制造8张0/1的幼体寄生虫加入对方卡组
+--消耗5点补给，制造6张0/1的幼体寄生虫加入对方卡组
 local s, id = Import()
 
 function s.initial(c)
@@ -20,10 +20,10 @@ function s.cost(e,tp,eg,ep,ev,re,r,rp,chk)
 end
 
 function s.activate(e,tp,eg,ep,ev,re,r,rp)
-	--创建8张幼体寄生虫token（需要先创建对应的卡片ID）
+	--创建6张幼体寄生虫token（需要先创建对应的卡片ID）
 	local g = Group.CreateGroup()
-	for i = 1, 8 do
-		-- 假设幼体寄生虫的ID是10000087，如果没有则需要先创建
+	for i = 1, 6 do
+		-- 幼体寄生虫的ID是10000087
 		local token = Duel.CreateToken(1-tp, 10000087)
 		g:AddCard(token)
 	end
