@@ -11,6 +11,7 @@ function s.initial(c)
 	c:RegisterEffect(e1)
 	local e2=e1:Clone()
 	e2:SetCode(EVENT_SPSUMMON_SUCCESS)
+	e1:SetCondition(s.spcon)
 	c:RegisterEffect(e2)
 	--你的哺乳类单位获得+1战斗力
 	local e3=Effect.CreateEffect(c)
@@ -51,4 +52,9 @@ end
 --场地效果目标
 function s.atktg(e,c)
 	return c:IsGalaxyCategory(GALAXY_CATEGORY_MAMMAL) and c:IsType(GALAXY_TYPE_UNIT)
+end
+
+function s.spcon(e,tp,eg,ep,ev,re,r,rp)
+	local c=e:GetHandler()
+	return c:IsPreviousLocation(LOCATION_HAND) or c:IsPreviousLocation(LOCATION_EXTRA)
 end

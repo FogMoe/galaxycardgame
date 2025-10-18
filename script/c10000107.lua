@@ -8,6 +8,7 @@ function s.initial(c)
     e1:SetCategory(CATEGORY_TOHAND+CATEGORY_SEARCH)
     e1:SetType(EFFECT_TYPE_SINGLE+EFFECT_TYPE_TRIGGER_F)
     e1:SetCode(EVENT_SPSUMMON_SUCCESS)
+	e1:SetCondition(s.spcon)
     e1:SetProperty(EFFECT_FLAG_DELAY)
     e1:SetTarget(s.thtg)
     e1:SetOperation(s.thop)
@@ -47,4 +48,9 @@ end
 function s.rushcon(e)
     local c=e:GetHandler()
     return c:IsFaceup() and c:GetEquipGroup():IsExists(Card.IsType,1,nil,TYPE_EQUIP)
+end
+
+function s.spcon(e,tp,eg,ep,ev,re,r,rp)
+	local c=e:GetHandler()
+	return c:IsPreviousLocation(LOCATION_HAND) or c:IsPreviousLocation(LOCATION_EXTRA)
 end

@@ -24,6 +24,7 @@ function s.initial(c)
 	e3:SetCategory(CATEGORY_DAMAGE+CATEGORY_RECOVER)
 	e3:SetType(EFFECT_TYPE_SINGLE+EFFECT_TYPE_TRIGGER_F)
 	e3:SetCode(EVENT_SPSUMMON_SUCCESS)
+	e1:SetCondition(s.spcon)
 	e3:SetOperation(s.drainop)
 	c:RegisterEffect(e3)
 
@@ -67,4 +68,9 @@ end
 -- 效果4和6的目标：对方场上所有表侧表示的单位
 function s.protecttg(e,c)
 	return c:IsFaceup()
+end
+
+function s.spcon(e,tp,eg,ep,ev,re,r,rp)
+	local c=e:GetHandler()
+	return c:IsPreviousLocation(LOCATION_HAND) or c:IsPreviousLocation(LOCATION_EXTRA)
 end

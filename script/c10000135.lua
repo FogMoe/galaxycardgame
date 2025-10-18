@@ -9,6 +9,7 @@ function s.initial(c)
 	e1:SetDescription(aux.Stringid(id,0))
 	e1:SetType(EFFECT_TYPE_SINGLE+EFFECT_TYPE_TRIGGER_F)
 	e1:SetCode(EVENT_SPSUMMON_SUCCESS)
+	e1:SetCondition(s.sumcon)
 	e1:SetOperation(s.sumop)
 	c:RegisterEffect(e1)
 
@@ -32,6 +33,12 @@ function s.initial(c)
 	e3:SetCondition(s.reccon)
 	e3:SetOperation(s.recop)
 	c:RegisterEffect(e3)
+end
+
+-- 战吼条件：只有从手牌或额外卡组部署才能触发
+function s.sumcon(e,tp,eg,ep,ev,re,r,rp)
+	local c=e:GetHandler()
+	return c:IsPreviousLocation(LOCATION_HAND) or c:IsPreviousLocation(LOCATION_EXTRA)
 end
 
 -- 部署时操作：失去5点影响力，获得+5生命值
