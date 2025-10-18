@@ -529,6 +529,10 @@ bool Game::Initialize() {
 	scrTabSystem->setSmallStep(1);
 	scrTabSystem->setVisible(false);
 	posY = 0;
+	env->addStaticText(dataManager.GetSysString(1267), irr::core::rect<irr::s32>(posX + 23, posY + 3, posX + 160, posY + 28), false, false, tabSystem);
+	cbLocale = env->addComboBox(irr::core::rect<irr::s32>(posX + 150, posY, posX + 250, posY + 21), tabSystem, COMBOBOX_LOCALE);
+	RefreshLocales();
+	posY += 30;
 	chkIgnore1 = env->addCheckBox(false, irr::core::rect<irr::s32>(posX, posY, posX + 260, posY + 25), tabSystem, CHECKBOX_DISABLE_CHAT, dataManager.GetSysString(1290));
 	chkIgnore1->setChecked(gameConf.chkIgnore1 != 0);
 	posY += 30;
@@ -589,23 +593,18 @@ bool Game::Initialize() {
 	chkEnablePScale = env->addCheckBox(false, irr::core::rect<irr::s32>(posX, posY, posX + 260, posY + 25), tabSystem, -1, dataManager.GetSysString(1269));
 	chkEnablePScale->setChecked(gameConf.chkEnablePScale != 0);
 	chkEnablePScale->setVisible(false); // 隐藏"数字灵摆图片"选择框
-		env->addStaticText(dataManager.GetSysString(1267), irr::core::rect<irr::s32>(posX + 23, posY + 3, posX + 160, posY + 28), false, false, tabSystem);
-		cbLocale = env->addComboBox(irr::core::rect<irr::s32>(posX + 150, posY, posX + 250, posY + 21), tabSystem, COMBOBOX_LOCALE);
-		RefreshLocales();
-		elmTabSystemLast = cbLocale;
-		posY += 30;
-		env->addStaticText(dataManager.GetSysString(1638), irr::core::rect<irr::s32>(posX + 23, posY + 3, posX + 160, posY + 28), false, false, tabSystem);
-		scrTextSize = env->addScrollBar(true, irr::core::rect<irr::s32>(posX + 150, posY + 4, posX + 250, posY + 21), tabSystem, SCROLL_TEXTSIZE);
-		scrTextSize->setMin(10);
-		scrTextSize->setMax(20);
-		scrTextSize->setSmallStep(1);
-		scrTextSize->setLargeStep(1);
-		int initialTextSize = std::min(20, std::max(10, static_cast<int>(gameConf.textfontsize)));
-		scrTextSize->setPos(initialTextSize);
-		wchar_t textSizeBuf[8]{};
-		myswprintf(textSizeBuf, L"%d", initialTextSize);
-		stTextSizeValue = env->addStaticText(textSizeBuf, irr::core::rect<irr::s32>(posX + 260, posY + 3, posX + 300, posY + 28), false, false, tabSystem);
-		elmTabSystemLast = scrTextSize;
+	env->addStaticText(dataManager.GetSysString(1638), irr::core::rect<irr::s32>(posX + 23, posY + 3, posX + 160, posY + 28), false, false, tabSystem);
+	scrTextSize = env->addScrollBar(true, irr::core::rect<irr::s32>(posX + 150, posY + 4, posX + 250, posY + 21), tabSystem, SCROLL_TEXTSIZE);
+	scrTextSize->setMin(10);
+	scrTextSize->setMax(20);
+	scrTextSize->setSmallStep(1);
+	scrTextSize->setLargeStep(1);
+	int initialTextSize = std::min(20, std::max(10, static_cast<int>(gameConf.textfontsize)));
+	scrTextSize->setPos(initialTextSize);
+	wchar_t textSizeBuf[8]{};
+	myswprintf(textSizeBuf, L"%d", initialTextSize);
+	stTextSizeValue = env->addStaticText(textSizeBuf, irr::core::rect<irr::s32>(posX + 260, posY + 3, posX + 300, posY + 28), false, false, tabSystem);
+	elmTabSystemLast = scrTextSize;
 	//
 	wHand = env->addWindow(irr::core::rect<irr::s32>(500, 450, 825, 605), false, L"");
 	wHand->getCloseButton()->setVisible(false);
