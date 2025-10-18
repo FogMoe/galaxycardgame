@@ -82,7 +82,7 @@ function s.spop(e,tp,eg,ep,ev,re,r,rp)
 	if tc and tc:IsRelateToEffect(e) then
 		if Duel.SpecialSummon(tc,0,tp,tp,false,false,POS_FACEUP_ATTACK)>0 then
 			--获得+X/+X（X为手卡数量）
-			local handcount=Duel.GetHandCount(tp)
+			local handcount=Duel.GetFieldGroupCount(tp,LOCATION_HAND,0)
 			if handcount>0 then
 				local e1=Effect.CreateEffect(e:GetHandler())
 				e1:SetType(EFFECT_TYPE_SINGLE)

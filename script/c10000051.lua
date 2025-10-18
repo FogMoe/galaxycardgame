@@ -54,17 +54,20 @@ function s.activate(e,tp,eg,ep,ev,re,r,rp)
 			tc:RegisterEffect(e2)
 
 			--下次自己补给阶段送往游戏外
+			local fid=tc:GetFieldID()
+			tc:RegisterFlagEffect(id,RESET_EVENT+RESETS_STANDARD,0,1,fid)
 			local e3=Effect.CreateEffect(e:GetHandler())
 			e3:SetDescription(aux.Stringid(id,0))
-			e3:SetCategory(CATEGORY_REMOVE)
-			e3:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_TRIGGER_F)
-			e3:SetCode(EVENT_PHASE+PHASE_DRAW)
-			e3:SetRange(GALAXY_LOCATION_UNIT_ZONE)
+			e3:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_CONTINUOUS)
+			e3:SetProperty(EFFECT_FLAG_IGNORE_IMMUNE)
+			e3:SetCode(EVENT_PHASE+GALAXY_PHASE_SUPPLY)
 			e3:SetCountLimit(1)
+			e3:SetLabel(fid,Duel.GetTurnCount())
+			e3:SetLabelObject(tc)
 			e3:SetCondition(s.rmcon)
 			e3:SetOperation(s.rmop)
-			e3:SetReset(RESET_EVENT+RESETS_STANDARD+RESET_PHASE+PHASE_DRAW+RESET_SELF_TURN,1)
-			tc:RegisterEffect(e3)
+			e3:SetReset(RESET_PHASE+GALAXY_PHASE_SUPPLY+RESET_SELF_TURN,2)
+			Duel.RegisterEffect(e3,tp)
 			--效果无效
 			local e4=Effect.CreateEffect(e:GetHandler())
 			e4:SetType(EFFECT_TYPE_SINGLE)
@@ -86,12 +89,12 @@ function s.activate(e,tp,eg,ep,ev,re,r,rp)
 end
 
 function s.rmcon(e,tp,eg,ep,ev,re,r,rp)
-	return Duel.GetTurnPlayer()==tp
+	local fid,ct=e:GetLabel()
+	local tc=e:GetLabelObject()
+	return Duel.GetTurnPlayer()==tp and Duel.GetTurnCount()~=ct and tc:GetFlagEffectLabel(id)==fid
 end
 
 function s.rmop(e,tp,eg,ep,ev,re,r,rp)
-	local c=e:GetHandler()
-	if c:IsRelateToEffect(e) then
-		Duel.Remove(c,POS_FACEUP,REASON_EFFECT)
-	end
+	local tc=e:GetLabelObject()
+	Duel.Remove(tc,POS_FACEUP,REASON_EFFECT)
 end

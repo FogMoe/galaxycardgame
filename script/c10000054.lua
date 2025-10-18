@@ -1,13 +1,14 @@
 --生物质回收网络
---设施支援卡。当一个单位死亡时，获得1点生物质计数标记。你可以消耗1点补给和4点生物质计数标记来部署一个临时的2/2的适应虫(c10000055)。如果你控制3个以上节肢类单位，适应虫额外获得+1/+1。
+--设施支援卡。当一个单位死亡时，获得1点生物质计数标记。你可以消耗1点补给和5点生物质计数标记来部署一个临时的2/2的适应虫(c10000055)。如果你控制3个以上节肢类单位，适应虫额外获得+1/+1。
 local s, id = Import()
 function s.initial(c)
 	--启用计数器
 	c:EnableCounterPermit(0x1041) --生物质计数器
-	--激活
+	--激活需要消耗2补给。
 	local e1=Effect.CreateEffect(c)
 	e1:SetType(EFFECT_TYPE_ACTIVATE)
 	e1:SetCode(EVENT_FREE_CHAIN)
+	e1:SetCost(s.cost)
 	c:RegisterEffect(e1)
 
 	--单位死亡时增加计数器
@@ -30,6 +31,10 @@ function s.initial(c)
 	e3:SetOperation(s.spop)
 	c:RegisterEffect(e3)
 end
+function s.cost(e,tp,eg,ep,ev,re,r,rp,chk)
+	if chk==0 then return Duel.CheckSupplyCost(tp, 2) end
+	Duel.PaySupplyCost(tp, 2)
+end
 
 --计数器相关
 function s.ctfilter(c)
@@ -51,10 +56,10 @@ end
 --召唤效果相关
 function s.spcost(e,tp,eg,ep,ev,re,r,rp,chk)
 	if chk==0 then
-		return Duel.CheckSupplyCost(tp,1) and e:GetHandler():GetCounter(0x1041)>=4
+		return Duel.CheckSupplyCost(tp,1) and e:GetHandler():GetCounter(0x1041)>=5
 	end
 	Duel.PaySupplyCost(tp,1)
-	e:GetHandler():RemoveCounter(tp,0x1041,4,REASON_COST)
+	e:GetHandler():RemoveCounter(tp,0x1041,5,REASON_COST)
 end
 
 function s.sptg(e,tp,eg,ep,ev,re,r,rp,chk)
