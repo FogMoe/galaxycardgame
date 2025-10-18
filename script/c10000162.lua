@@ -8,6 +8,7 @@ function s.initial(c)
 	e1:SetCategory(CATEGORY_DISABLE)
 	e1:SetType(EFFECT_TYPE_SINGLE+EFFECT_TYPE_TRIGGER_F)
 	e1:SetCode(EVENT_SPSUMMON_SUCCESS)
+	e1:SetCondition(s.spcon)
 	e1:SetProperty(EFFECT_FLAG_CARD_TARGET+EFFECT_FLAG_DELAY)
 	e1:SetTarget(s.distg)
 	e1:SetOperation(s.disop)
@@ -52,4 +53,9 @@ end
 function s.discon(e)
 	local c=e:GetLabelObject()
 	return c and c:IsFaceup() and c:IsLocation(GALAXY_LOCATION_UNIT_ZONE)
+end
+
+function s.spcon(e,tp,eg,ep,ev,re,r,rp)
+	local c=e:GetHandler()
+	return c:IsPreviousLocation(LOCATION_HAND) or c:IsPreviousLocation(LOCATION_EXTRA)
 end

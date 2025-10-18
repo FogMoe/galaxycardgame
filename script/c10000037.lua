@@ -27,8 +27,10 @@ end
 
 function s.condition(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
+	--只有从手牌或额外卡组部署才能触发
+	local prev_loc=c:IsPreviousLocation(LOCATION_HAND) or c:IsPreviousLocation(LOCATION_EXTRA)
 	--检查手牌中是否有其他节肢类单位
-	return Duel.IsExistingMatchingCard(s.filter,tp,LOCATION_HAND,0,1,c)
+	return prev_loc and Duel.IsExistingMatchingCard(s.filter,tp,LOCATION_HAND,0,1,c)
 end
 
 function s.operation(e,tp,eg,ep,ev,re,r,rp)

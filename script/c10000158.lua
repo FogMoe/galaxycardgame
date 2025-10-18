@@ -12,6 +12,7 @@ function s.initial(c)
 	e2:SetCategory(CATEGORY_DAMAGE+CATEGORY_DEFCHANGE)
 	e2:SetType(EFFECT_TYPE_SINGLE+EFFECT_TYPE_TRIGGER_F)
 	e2:SetCode(EVENT_SPSUMMON_SUCCESS)
+	e2:SetCondition(s.spcon)
 	e2:SetProperty(EFFECT_FLAG_DELAY+EFFECT_FLAG_CARD_TARGET)
 	e2:SetTarget(s.acttg)
 	e2:SetOperation(s.actop)
@@ -100,4 +101,9 @@ function s.revop(e,tp,eg,ep,ev,re,r,rp)
 		e2:SetProperty(EFFECT_FLAG_CLIENT_HINT)
 		c:RegisterEffect(e2)
 	end
+end
+
+function s.spcon(e,tp,eg,ep,ev,re,r,rp)
+	local c=e:GetHandler()
+	return c:IsPreviousLocation(LOCATION_HAND) or c:IsPreviousLocation(LOCATION_EXTRA)
 end

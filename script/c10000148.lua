@@ -10,6 +10,7 @@ function s.initial(c)
 	e1:SetCategory(CATEGORY_TOHAND+CATEGORY_SEARCH)
 	e1:SetType(EFFECT_TYPE_SINGLE+EFFECT_TYPE_TRIGGER_O)
 	e1:SetCode(EVENT_SPSUMMON_SUCCESS)
+	e1:SetCondition(s.spcon)
 	e1:SetProperty(EFFECT_FLAG_DELAY)
 	e1:SetTarget(s.thtg)
 	e1:SetOperation(s.thop)
@@ -36,4 +37,9 @@ function s.thop(e,tp,eg,ep,ev,re,r,rp)
 		local tc=g:RandomSelect(tp,1):GetFirst()
 		Duel.SendtoHand(tc,nil,REASON_EFFECT)
 	end
+end
+
+function s.spcon(e,tp,eg,ep,ev,re,r,rp)
+	local c=e:GetHandler()
+	return c:IsPreviousLocation(LOCATION_HAND) or c:IsPreviousLocation(LOCATION_EXTRA)
 end
