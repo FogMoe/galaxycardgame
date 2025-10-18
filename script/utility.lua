@@ -2429,8 +2429,8 @@ function Galaxy.SummonForStart(e,tp,eg,ep,ev,re,r,rp)
 		Duel.ConfirmCards(0,tc)
 		Duel.Hint(HINT_CARD,0,tc:GetCode())
 		Duel.SpecialSummon(tc,0,0,0,false,false,POS_FACEUP_ATTACK)
-		--给对手增加7lp(set)
-		Duel.SetLP(1,Duel.GetLP(1)+7)
+		--给对手增加8lp(set)
+		Duel.SetLP(1,Duel.GetLP(1)+8)
 	end
 
 	-- 然后处理：检查并召唤玩家1的c10000101
@@ -2440,8 +2440,8 @@ function Galaxy.SummonForStart(e,tp,eg,ep,ev,re,r,rp)
 		Duel.ConfirmCards(1,tc)
 		Duel.Hint(HINT_CARD,1,tc:GetCode())
 		Duel.SpecialSummon(tc,0,1,1,false,false,POS_FACEUP_ATTACK)
-		--给对手增加7lp(set)
-		Duel.SetLP(0,Duel.GetLP(0)+7)
+		--给对手增加8lp(set)
+		Duel.SetLP(0,Duel.GetLP(0)+8)
 	end
 
 	--如果有任意玩家携带了c10000101则双方玩家在本局中抽牌阶段额外抽1张卡，只能生效1个。

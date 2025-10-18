@@ -74,7 +74,7 @@ function s.spop(e,tp,eg,ep,ev,re,r,rp)
 
 		-- 添加客户端提示
 		local e2=Effect.CreateEffect(c)
-		e2:SetDescription(aux.Stringid(id,3))
+		e2:SetDescription(aux.Stringid(id,1))
 		e2:SetType(EFFECT_TYPE_SINGLE)
 		e2:SetProperty(EFFECT_FLAG_CLIENT_HINT)
 		c:RegisterEffect(e2)

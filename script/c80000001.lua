@@ -71,8 +71,8 @@ end
 function s.deathop(e,tp,eg,ep,ev,re,r,rp)
 	local c=e:GetHandler()
 	-- 获取这张卡死亡前的属性值（最后已知信息）
-	local atk=c:GetAttack()
-	local hp=c:GetHp()
+	local atk=c:GetPreviousAttackOnField()
+	local hp=c:GetPreviousDefenseOnField()
 
 	-- 获取我方所有节肢类单位
 	local g=Duel.GetMatchingGroup(s.filter,tp,GALAXY_LOCATION_UNIT_ZONE,0,nil)
@@ -86,13 +86,15 @@ function s.deathop(e,tp,eg,ep,ev,re,r,rp)
 			e1:SetReset(RESET_EVENT+RESETS_STANDARD)
 			tc:RegisterEffect(e1)
 
-			-- 增加最大HP
-			local e2=Effect.CreateEffect(c)
-			e2:SetType(EFFECT_TYPE_SINGLE)
-			e2:SetCode(EFFECT_UPDATE_HP)
-			e2:SetValue(hp)
-			e2:SetReset(RESET_EVENT+RESETS_STANDARD)
-			tc:RegisterEffect(e2)
+			-- 只有当死亡时还有HP（hp>0）时才增加最大HP
+			if hp>0 then
+				local e2=Effect.CreateEffect(c)
+				e2:SetType(EFFECT_TYPE_SINGLE)
+				e2:SetCode(EFFECT_UPDATE_HP)
+				e2:SetValue(hp)
+				e2:SetReset(RESET_EVENT+RESETS_STANDARD)
+				tc:RegisterEffect(e2)
+			end
 		end
 	end
 end
