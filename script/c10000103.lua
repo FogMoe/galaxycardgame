@@ -8,6 +8,7 @@ function s.initial(c)
     e1:SetCategory(CATEGORY_TOKEN+CATEGORY_TOHAND)
     e1:SetType(EFFECT_TYPE_SINGLE+EFFECT_TYPE_TRIGGER_F)
     e1:SetCode(EVENT_SPSUMMON_SUCCESS)
+	e1:SetCondition(s.spcon)
     e1:SetProperty(EFFECT_FLAG_DELAY)
     e1:SetCondition(s.tkcon)
     e1:SetTarget(s.tktg)
@@ -41,4 +42,9 @@ function s.tkop(e,tp,eg,ep,ev,re,r,rp)
         end
         created:DeleteGroup()
     end
+end
+
+function s.spcon(e,tp,eg,ep,ev,re,r,rp)
+	local c=e:GetHandler()
+	return c:IsPreviousLocation(LOCATION_HAND) or c:IsPreviousLocation(LOCATION_EXTRA)
 end

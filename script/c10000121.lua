@@ -16,6 +16,7 @@ function s.initial(c)
 	e1:SetCategory(CATEGORY_ATKCHANGE+CATEGORY_DEFCHANGE)
 	e1:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_TRIGGER_F)
 	e1:SetCode(EVENT_SPSUMMON_SUCCESS)
+	e1:SetCondition(s.spcon)
 	e1:SetRange(LOCATION_FZONE)
 	e1:SetCondition(s.atkcon)
 	e1:SetTarget(s.atktg)
@@ -131,4 +132,9 @@ function s.thop(e,tp,eg,ep,ev,re,r,rp)
 		end
 		--Duel.ConfirmCards(tp,Duel.GetFieldGroup(1-tp,LOCATION_HAND,0))
 	end
+end
+
+function s.spcon(e,tp,eg,ep,ev,re,r,rp)
+	local c=e:GetHandler()
+	return c:IsPreviousLocation(LOCATION_HAND) or c:IsPreviousLocation(LOCATION_EXTRA)
 end

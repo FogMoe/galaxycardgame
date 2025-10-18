@@ -6,6 +6,7 @@ function s.initial(c)
 	e1:SetDescription(aux.Stringid(id,0))
 	e1:SetType(EFFECT_TYPE_SINGLE+EFFECT_TYPE_TRIGGER_F)
 	e1:SetCode(EVENT_SPSUMMON_SUCCESS)
+	e1:SetCondition(s.spcon)
 	e1:SetOperation(s.stealthop)
 	c:RegisterEffect(e1)
 end
@@ -35,4 +36,8 @@ function s.stealthop(e,tp,eg,ep,ev,re,r,rp)
 		e2:SetReset(RESET_EVENT + RESETS_STANDARD)
 		c:RegisterEffect(e2)
 	end
+end
+function s.spcon(e,tp,eg,ep,ev,re,r,rp)
+	local c=e:GetHandler()
+	return c:IsPreviousLocation(LOCATION_HAND) or c:IsPreviousLocation(LOCATION_EXTRA)
 end
