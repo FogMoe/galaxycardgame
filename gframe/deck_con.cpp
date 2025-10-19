@@ -1917,6 +1917,8 @@ bool DeckBuilder::CardNameContains(const wchar_t* haystack, const wchar_t* needl
 bool DeckBuilder::push_main(code_pointer pointer, int seq) {
 	if(pointer->second.type & (TYPE_FUSION | TYPE_SYNCHRO | TYPE_XYZ | TYPE_LINK))
 		return false;
+	if(!check_light_limit(pointer))
+		return false;
 	auto& container = deckManager.current_deck.main;
 	int maxc = mainGame->is_siding ? DECK_MAX_SIZE + 5 : DECK_MAX_SIZE;
 	if((int)container.size() >= maxc)
@@ -1932,6 +1934,8 @@ bool DeckBuilder::push_main(code_pointer pointer, int seq) {
 bool DeckBuilder::push_extra(code_pointer pointer, int seq) {
 	if(!(pointer->second.type & (TYPE_FUSION | TYPE_SYNCHRO | TYPE_XYZ | TYPE_LINK)))
 		return false;
+	if(!check_light_limit(pointer))
+		return false;
 	auto& container = deckManager.current_deck.extra;
 	int maxc = mainGame->is_siding ? EXTRA_MAX_SIZE + 5 : EXTRA_MAX_SIZE;
 	if((int)container.size() >= maxc)
@@ -1945,6 +1949,8 @@ bool DeckBuilder::push_extra(code_pointer pointer, int seq) {
 	return true;
 }
 bool DeckBuilder::push_side(code_pointer pointer, int seq) {
+	if(!check_light_limit(pointer))
+		return false;
 	auto& container = deckManager.current_deck.side;
 	int maxc = mainGame->is_siding ? SIDE_MAX_SIZE + 5 : SIDE_MAX_SIZE;
 	if((int)container.size() >= maxc)
@@ -1956,6 +1962,21 @@ bool DeckBuilder::push_side(code_pointer pointer, int seq) {
 	is_modified = true;
 	GetHoveredCard();
 	return true;
+}
+bool DeckBuilder::check_light_limit(code_pointer pointer) const {
+	if(!(pointer->second.attribute & ATTRIBUTE_LIGHT))
+		return true;
+	int light_total = 0;
+	auto accumulate = [&](const std::vector<code_pointer>& cards) {
+		for(auto& card : cards) {
+			if(card->second.attribute & ATTRIBUTE_LIGHT)
+				++light_total;
+		}
+	};
+	accumulate(deckManager.current_deck.main);
+	accumulate(deckManager.current_deck.extra);
+	accumulate(deckManager.current_deck.side);
+	return light_total < 1;
 }
 void DeckBuilder::pop_main(int seq) {
 	auto& container = deckManager.current_deck.main;
@@ -1976,6 +1997,8 @@ void DeckBuilder::pop_side(int seq) {
 	GetHoveredCard();
 }
 bool DeckBuilder::check_limit(code_pointer pointer) {
+	if(!check_light_limit(pointer))
+		return false;
 	auto limitcode = pointer->second.alias ? pointer->second.alias : pointer->first;
 	int limit = 3;
 	auto flit = filterList->content.find(limitcode);

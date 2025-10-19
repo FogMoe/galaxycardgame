@@ -42,6 +42,7 @@ public:
 	void pop_extra(int seq);
 	void pop_side(int seq);
 	bool check_limit(code_pointer pointer);
+	bool check_light_limit(code_pointer pointer) const;
 
 	unsigned long long filter_effect{};
 	unsigned int filter_type{};
