@@ -21,6 +21,7 @@
 - 通常怪兽 → **一般单位**（仍使用 `TYPE_NORMAL`） - Normal Unit
 - 效果怪兽 → **部队** (`GALAXY_TYPE_FORCES`) - Forces
 - 融合怪兽 → **大型单位** (`GALAXY_TYPE_LARGE`) - Large Unit
+- 同调怪兽 → **统帅** (`GALAXY_TYPE_LEADER`) - President
 - 永续卡 → **设施** (`GALAXY_TYPE_FACILITY`) - Facility
 - 场地卡 → **区域** (`GALAXY_TYPE_AREA`) - Area 
 - 装备卡 → **强化** (`GALAXY_TYPE_ENHANCEMENT`) - Enhancement
