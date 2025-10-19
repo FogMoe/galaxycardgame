@@ -178,6 +178,7 @@ static unsigned int checkAvail(unsigned int ot, unsigned int avail) {
 }
 unsigned int DeckManager::CheckDeck(const Deck& deck, unsigned int lfhash, int rule) {
 	std::unordered_map<int, int> ccount;
+	int light_count = 0;
 	// rule
 	if(deck.main.size() < DECK_MIN_SIZE || deck.main.size() > DECK_MAX_SIZE)
 		return (DECKERROR_MAINCOUNT << 28) | (unsigned)deck.main.size();
@@ -220,6 +221,8 @@ unsigned int DeckManager::CheckDeck(const Deck& deck, unsigned int lfhash, int r
 			return (gameruleDeckError << 28) | cit->first;
 		if (cit->second.type & (TYPES_EXTRA_DECK | TYPE_TOKEN))
 			return (DECKERROR_MAINCOUNT << 28);
+		if(cit->second.attribute & ATTRIBUTE_LIGHT)
+			++light_count;
 		int code = cit->second.alias ? cit->second.alias : cit->first;
 		ccount[code]++;
 		int dc = ccount[code];
@@ -238,6 +241,8 @@ unsigned int DeckManager::CheckDeck(const Deck& deck, unsigned int lfhash, int r
 			return (gameruleDeckError << 28) | cit->first;
 		if (!(cit->second.type & TYPES_EXTRA_DECK) || cit->second.type & TYPE_TOKEN)
 			return (DECKERROR_EXTRACOUNT << 28);
+		if(cit->second.attribute & ATTRIBUTE_LIGHT)
+			++light_count;
 		int code = cit->second.alias ? cit->second.alias : cit->first;
 		ccount[code]++;
 		int dc = ccount[code];
@@ -256,6 +261,8 @@ unsigned int DeckManager::CheckDeck(const Deck& deck, unsigned int lfhash, int r
 			return (gameruleDeckError << 28) | cit->first;
 		if (cit->second.type & TYPE_TOKEN)
 			return (DECKERROR_SIDECOUNT << 28);
+		if(cit->second.attribute & ATTRIBUTE_LIGHT)
+			++light_count;
 		int code = cit->second.alias ? cit->second.alias : cit->first;
 		ccount[code]++;
 		int dc = ccount[code];
@@ -268,6 +275,8 @@ unsigned int DeckManager::CheckDeck(const Deck& deck, unsigned int lfhash, int r
 		if(spend_credit_error)
 			return spend_credit_error;
 	}
+	if(light_count != 1)
+		return (DECKERROR_LIGHTCOUNT << 28) | (unsigned int)light_count;
 	return 0;
 }
 uint32_t DeckManager::LoadDeck(Deck& deck, uint32_t dbuf[], int mainc, int sidec, bool is_packlist) {
