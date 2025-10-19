@@ -4,7 +4,8 @@ function s.initial(c)
 	--魔法卡，把1只水属性的，融合怪兽从额外卡组特殊召唤。支付那只怪兽等级的（补给）作为代价，如果补给不足，则送到墓地。
 	local e1=Effect.CreateEffect(c)
 	e1:SetCategory(CATEGORY_SPECIAL_SUMMON)
-	e1:SetType(EFFECT_TYPE_ACTIVATE)
+	e1:SetType(EFFECT_TYPE_IGNITION)
+	e1:SetRange(LOCATION_HAND)
 	e1:SetCode(EVENT_FREE_CHAIN)
 	--消耗5点影响力
 	e1:SetCost(s.cost)
@@ -50,4 +51,6 @@ function s.activate(e,tp,eg,ep,ev,re,r,rp)
 		end
 		Duel.SendtoGrave(tc,REASON_EFFECT)
 	end
+	Duel.BreakEffect()
+	Duel.SendtoGrave(e:GetHandler(),REASON_DISCARD)
 end

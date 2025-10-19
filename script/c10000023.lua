@@ -4,7 +4,8 @@ function s.initial(c)
 	--魔法卡，自己场上有大型单位（融合怪）时才能使用，减少对方全部怪兽1点def，那之后，可以再消耗3点补给，再减少对方全部怪兽1点def。
 	local e1=Effect.CreateEffect(c)
 	e1:SetCategory(CATEGORY_DEFCHANGE)
-	e1:SetType(EFFECT_TYPE_ACTIVATE)
+	e1:SetType(EFFECT_TYPE_IGNITION)
+	e1:SetRange(LOCATION_HAND)
 	e1:SetCode(EVENT_FREE_CHAIN)
 	e1:SetTarget(s.target)
 	e1:SetOperation(s.activate)
@@ -33,6 +34,8 @@ function s.activate(e,tp,eg,ep,ev,re,r,rp)
 			Duel.AddHp(tc, -1, REASON_EFFECT)
 		end
 	end
+	Duel.BreakEffect()
+	Duel.SendtoGrave(e:GetHandler(),REASON_DISCARD)
 end
 function s.cfilter(c)
 	return c:IsFaceup() and c:IsType(TYPE_FUSION)

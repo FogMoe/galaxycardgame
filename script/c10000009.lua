@@ -3,10 +3,11 @@ local s, id = Import()
 function s.initial(c)
 	--回复2补给
 	local e1=Effect.CreateEffect(c)
-	e1:SetType(EFFECT_TYPE_ACTIVATE)
+	e1:SetType(EFFECT_TYPE_IGNITION)
 	--e1:SetCategory(CATEGORY_RECOVER)  --原版：回复影响力用
 	--e1:SetProperty(EFFECT_FLAG_PLAYER_TARGET)  --原版：回复影响力用
 	e1:SetCode(EVENT_FREE_CHAIN)
+	e1:SetRange(LOCATION_HAND)
 	e1:SetTarget(s.suptg)
 	e1:SetOperation(s.supop)
 	c:RegisterEffect(e1)
@@ -31,6 +32,9 @@ function s.supop(e,tp,eg,ep,ev,re,r,rp)
 	e2:SetOperation(s.penaltyop)
 	e2:SetReset(RESET_PHASE+GALAXY_PHASE_SUPPLY+RESET_SELF_TURN)
 	Duel.RegisterEffect(e2,tp)
+
+	Duel.BreakEffect()
+	Duel.SendtoGrave(e:GetHandler(),REASON_DISCARD)
 end
 
 -- 下次补给阶段的条件：自己的回合且是补给阶段
