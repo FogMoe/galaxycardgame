@@ -2320,6 +2320,16 @@ function Galaxy.PlayerRule(c)
 	local e4 = e2:Clone()
 	e4:SetCode(EFFECT_CANNOT_SSET)
 	Duel.RegisterEffect(e4, 0)
+	--开局展示指挥官
+	local eCommander = Effect.CreateEffect(c)
+	eCommander:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
+	eCommander:SetCode(EVENT_PHASE_START + PHASE_DRAW)
+	eCommander:SetCondition(Galaxy.RevealCommanderCondition)
+	eCommander:SetOperation(Galaxy.RevealCommanderOperation)
+	eCommander:SetLabel(0)
+	eCommander:SetProperty(EFFECT_FLAG_PLAYER_TARGET)
+	eCommander:SetTargetRange(LOCATION_EXTRA, LOCATION_EXTRA)
+	Duel.RegisterEffect(eCommander, 0)
 	--先攻玩家的第一次抽卡后给后攻玩家手牌中创建 一次性能量电池(99999999)
 	local e5 = Effect.CreateEffect(c)
 	e5:SetType(EFFECT_TYPE_FIELD + EFFECT_TYPE_CONTINUOUS)
@@ -2335,6 +2345,61 @@ function Galaxy.PlayerRule(c)
 	e6:SetCondition(Galaxy.CheckDeckForStart)
 	e6:SetOperation(Galaxy.SummonForStart)
 	Duel.RegisterEffect(e6, 0)
+end
+
+local function GalaxyCommanderFilter(c)
+	return c:IsType(TYPE_MONSTER) and c:IsAttribute(ATTRIBUTE_LIGHT)
+end
+
+function Galaxy.RevealCommander(player)
+	local commander = Duel.GetFirstMatchingCard(GalaxyCommanderFilter, player, LOCATION_EXTRA, 0, nil)
+	if not commander then
+		return nil
+	end
+	Duel.ConfirmCards(player, commander)
+	if commander:IsLocation(LOCATION_EXTRA) then
+		local moved = false
+		if Duel.CheckLocation(player, LOCATION_SZONE, 2) then
+			moved = Duel.MoveToField(commander, player, player, LOCATION_SZONE, POS_FACEUP, true, 0x4)
+			if moved then
+				local e_immune = Effect.CreateEffect(commander)
+				e_immune:SetType(EFFECT_TYPE_SINGLE)
+				e_immune:SetProperty(EFFECT_FLAG_SINGLE_RANGE+EFFECT_FLAG_CANNOT_DISABLE + EFFECT_FLAG_UNCOPYABLE)
+				e_immune:SetRange(LOCATION_SZONE)
+				e_immune:SetCode(EFFECT_IMMUNE_EFFECT)
+				e_immune:SetValue(function(e,te)
+					local handler = te:GetHandler()
+					if handler and handler:GetOwner() == e:GetHandler() then
+						return false
+					end
+					return te:IsActivated()
+				end)
+				commander:RegisterEffect(e_immune)
+				local e_ntg = Effect.CreateEffect(commander)
+				e_ntg:SetType(EFFECT_TYPE_SINGLE)
+				e_ntg:SetProperty(EFFECT_FLAG_SINGLE_RANGE+EFFECT_FLAG_CANNOT_DISABLE + EFFECT_FLAG_UNCOPYABLE)
+				e_ntg:SetRange(LOCATION_SZONE)
+				e_ntg:SetCode(EFFECT_CANNOT_BE_EFFECT_TARGET)
+				e_ntg:SetValue(1)
+				commander:RegisterEffect(e_ntg)
+			end
+		end
+		if not moved and commander:IsLocation(LOCATION_EXTRA) then
+			Debug.Message("ERROR!")
+		end
+	end
+	Duel.Hint(HINT_CARD, player, commander:GetCode())
+	return commander
+end
+
+function Galaxy.RevealCommanderCondition(e,tp,eg,ep,ev,re,r,rp)
+	return Duel.GetTurnCount() == 1 and e:GetLabel() == 0
+end
+
+function Galaxy.RevealCommanderOperation(e,tp,eg,ep,ev,re,r,rp)
+	e:SetLabel(1)
+	Galaxy.RevealCommander(0)
+	Galaxy.RevealCommander(1)
 end
 
 -- 检查双方卡组中是否有c10000101或c10000145
