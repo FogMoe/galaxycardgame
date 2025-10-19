@@ -4,7 +4,8 @@ function s.initial(c)
 	--消耗3点补给
 	--这个回合，自己手卡中等级3以下的怪兽等级下降2点。
 	local e1=Effect.CreateEffect(c)
-	e1:SetType(EFFECT_TYPE_ACTIVATE)
+	e1:SetType(EFFECT_TYPE_IGNITION)
+	e1:SetRange(LOCATION_HAND)
 	e1:SetCode(EVENT_FREE_CHAIN)
 	e1:SetCost(s.cost)
 	e1:SetOperation(s.activate)
@@ -33,6 +34,8 @@ function s.activate(e,tp,eg,ep,ev,re,r,rp)
 	e2:SetReset(RESET_PHASE+PHASE_END)
 	e2:SetOperation(s.hlvop)
 	Duel.RegisterEffect(e2,tp)
+	Duel.BreakEffect()
+	Duel.SendtoGrave(e:GetHandler(),REASON_DISCARD)
 end
 function s.filter(c)
 	return c:IsLevelBelow(3) and c:IsLevelAbove(1)

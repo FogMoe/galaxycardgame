@@ -3,7 +3,8 @@ local s,id=Import()
 function s.initial(c)
 	local e1=Effect.CreateEffect(c)
 	e1:SetCategory(CATEGORY_DRAW)
-	e1:SetType(EFFECT_TYPE_ACTIVATE)
+	e1:SetType(EFFECT_TYPE_IGNITION)
+	e1:SetRange(LOCATION_HAND)
 	e1:SetCode(EVENT_FREE_CHAIN)
 	e1:SetCondition(s.con)
 	e1:SetCost(s.cost)
@@ -26,4 +27,6 @@ function s.op(e,tp)
 	if Duel.IsPlayerCanDraw(tp,2) then
 		Duel.Draw(tp,2,REASON_EFFECT)
 	end
+	Duel.BreakEffect()
+	Duel.SendtoGrave(e:GetHandler(),REASON_DISCARD)
 end

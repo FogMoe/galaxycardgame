@@ -8,7 +8,8 @@ function s.initial(c)
 	local e1=Effect.CreateEffect(c)
 	e1:SetDescription(aux.Stringid(id,0))
 	e1:SetCategory(CATEGORY_DEFCHANGE)
-	e1:SetType(EFFECT_TYPE_ACTIVATE)
+	e1:SetType(EFFECT_TYPE_IGNITION)
+	e1:SetRange(LOCATION_HAND)
 	e1:SetCode(EVENT_FREE_CHAIN)
 	e1:SetCost(s.cost)
 	e1:SetCondition(s.condition)
@@ -48,4 +49,6 @@ function s.activate(e,tp,eg,ep,ev,re,r,rp)
 			Duel.AddHp(tc,-2,REASON_EFFECT)
 		end
 	end
+	Duel.BreakEffect()
+	Duel.SendtoGrave(e:GetHandler(),REASON_DISCARD)
 end

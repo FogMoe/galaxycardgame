@@ -6,7 +6,8 @@ function s.initial(c)
 	--发动
 	local e1=Effect.CreateEffect(c)
 	e1:SetCategory(CATEGORY_TODECK)
-	e1:SetType(EFFECT_TYPE_ACTIVATE)
+	e1:SetType(EFFECT_TYPE_IGNITION)
+	e1:SetRange(LOCATION_HAND)
 	e1:SetCode(EVENT_FREE_CHAIN)
 	e1:SetCost(s.cost)
 	e1:SetOperation(s.activate)
@@ -33,4 +34,6 @@ function s.activate(e,tp,eg,ep,ev,re,r,rp)
 		Duel.ConfirmCards(1-tp, g)
 		Duel.SendtoDeck(g, 1-tp, 2, REASON_EFFECT)
 	end
+	Duel.BreakEffect()
+	Duel.SendtoGrave(e:GetHandler(),REASON_DISCARD)
 end
