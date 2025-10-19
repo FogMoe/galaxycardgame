@@ -2396,10 +2396,93 @@ function Galaxy.RevealCommanderCondition(e,tp,eg,ep,ev,re,r,rp)
 	return Duel.GetTurnCount() == 1 and e:GetLabel() == 0
 end
 
+local function GalaxyCommanderBuffFilter(c,tp)
+	return c:IsFaceup() and c:IsType(GALAXY_TYPE_UNIT) and c:IsControler(tp) and c:GetFlagEffect(90000000)==0
+end
+
+function Galaxy.CommanderBuffCondition(e,tp,eg,ep,ev,re,r,rp)
+	return Duel.GetTurnCount() >= 5 and Duel.GetTurnPlayer() == tp
+end
+
+function Galaxy.CommanderBuffCost(e,tp,eg,ep,ev,re,r,rp,chk)
+	local c = e:GetHandler()
+	if chk==0 then
+		return c:IsCanRemoveCounter(tp,0x1040,1,REASON_COST)
+	end
+	c:RemoveCounter(tp,0x1040,1,REASON_COST)
+end
+
+function Galaxy.CommanderBuffTarget(e,tp,eg,ep,ev,re,r,rp,chk,chkc)
+	if chkc then
+		return chkc:IsLocation(GALAXY_LOCATION_UNIT_ZONE) and GalaxyCommanderBuffFilter(chkc,tp)
+	end
+	if chk==0 then
+		return Duel.IsExistingTarget(GalaxyCommanderBuffFilter,tp,GALAXY_LOCATION_UNIT_ZONE,0,1,nil,tp)
+	end
+	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_FACEUP)
+	Duel.SelectTarget(tp,GalaxyCommanderBuffFilter,tp,GALAXY_LOCATION_UNIT_ZONE,0,1,1,nil,tp)
+end
+
+function Galaxy.CommanderBuffOperation(e,tp,eg,ep,ev,re,r,rp)
+	local tc=Duel.GetFirstTarget()
+	if not tc or not tc:IsRelateToEffect(e) or not tc:IsFaceup() then
+		return
+	end
+	local handler=e:GetHandler()
+	local e_atk=Effect.CreateEffect(handler)
+	e_atk:SetType(EFFECT_TYPE_SINGLE)
+	e_atk:SetCode(EFFECT_UPDATE_ATTACK)
+	e_atk:SetValue(2)
+	e_atk:SetReset(RESET_EVENT+RESETS_STANDARD)
+	tc:RegisterEffect(e_atk)
+	local e_hp=Effect.CreateEffect(handler)
+	e_hp:SetType(EFFECT_TYPE_SINGLE)
+	e_hp:SetCode(EFFECT_UPDATE_HP)
+	e_hp:SetValue(2)
+	e_hp:SetReset(RESET_EVENT+RESETS_STANDARD)
+	tc:RegisterEffect(e_hp)
+	local e_rush=Effect.CreateEffect(handler)
+	e_rush:SetType(EFFECT_TYPE_SINGLE)
+	e_rush:SetCode(EFFECT_RUSH_R)
+	e_rush:SetReset(RESET_EVENT+RESETS_STANDARD)
+	tc:RegisterEffect(e_rush)
+	local e_hint=Effect.CreateEffect(handler)
+	e_hint:SetType(EFFECT_TYPE_SINGLE)
+	e_hint:SetProperty(EFFECT_FLAG_CLIENT_HINT)
+	e_hint:SetDescription(aux.Stringid(90000000,0))
+	e_hint:SetReset(RESET_EVENT+RESETS_STANDARD)
+	tc:RegisterEffect(e_hint)
+	tc:RegisterFlagEffect(90000000,RESET_EVENT+RESETS_STANDARD,0,0)
+end
+
+local function GalaxySetupCommanderSupport(commander)
+	if not commander or not commander:IsFaceup() or not commander:IsLocation(LOCATION_SZONE) then
+		return
+	end
+	commander:EnableCounterPermit(0x1040, LOCATION_SZONE)
+	if commander:IsCanAddCounter(0x1040,2) then
+		commander:AddCounter(0x1040,2)
+	end
+	local e_buff=Effect.CreateEffect(commander)
+	e_buff:SetDescription(aux.Stringid(90000000,0))
+	e_buff:SetType(EFFECT_TYPE_IGNITION)
+	e_buff:SetCategory(CATEGORY_ATKCHANGE+CATEGORY_DEFCHANGE)
+	e_buff:SetRange(LOCATION_SZONE)
+	e_buff:SetProperty(EFFECT_FLAG_CARD_TARGET)
+	e_buff:SetCountLimit(1)
+	e_buff:SetCondition(Galaxy.CommanderBuffCondition)
+	e_buff:SetCost(Galaxy.CommanderBuffCost)
+	e_buff:SetTarget(Galaxy.CommanderBuffTarget)
+	e_buff:SetOperation(Galaxy.CommanderBuffOperation)
+	commander:RegisterEffect(e_buff)
+end
+
 function Galaxy.RevealCommanderOperation(e,tp,eg,ep,ev,re,r,rp)
 	e:SetLabel(1)
-	Galaxy.RevealCommander(0)
-	Galaxy.RevealCommander(1)
+	local commander0 = Galaxy.RevealCommander(0)
+	local commander1 = Galaxy.RevealCommander(1)
+	GalaxySetupCommanderSupport(commander0)
+	GalaxySetupCommanderSupport(commander1)
 end
 
 -- 检查双方卡组中是否有c10000101或c10000145
