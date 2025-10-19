@@ -4,7 +4,8 @@ function s.initial(c)
 	--魔法卡，支付2补给作为代价，选自己场上1个怪兽直到结束攻击力上升4点，回合结束时破坏。
 	local e1=Effect.CreateEffect(c)
 	e1:SetCategory(CATEGORY_ATKCHANGE)
-	e1:SetType(EFFECT_TYPE_ACTIVATE)
+	e1:SetType(EFFECT_TYPE_IGNITION)
+	e1:SetRange(LOCATION_HAND)
 	e1:SetCode(EVENT_FREE_CHAIN)
 	e1:SetProperty(EFFECT_FLAG_CARD_TARGET)
 	e1:SetCost(s.cost)
@@ -50,6 +51,8 @@ function s.activate(e,tp,eg,ep,ev,re,r,rp)
 		e2:SetOperation(s.desop)
 		Duel.RegisterEffect(e2,tp)
 	end
+	Duel.BreakEffect()
+	Duel.SendtoGrave(e:GetHandler(),REASON_DISCARD)
 end
 
 function s.descon(e,tp,eg,ep,ev,re,r,rp)

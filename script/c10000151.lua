@@ -7,7 +7,8 @@ function s.initial(c)
 	-- 激活效果
 	local e1=Effect.CreateEffect(c)
 	e1:SetDescription(aux.Stringid(id,0))
-	e1:SetType(EFFECT_TYPE_ACTIVATE)
+	e1:SetType(EFFECT_TYPE_IGNITION)
+	e1:SetRange(LOCATION_HAND)
 	e1:SetCode(EVENT_FREE_CHAIN)
 	e1:SetCost(s.cost)
 	e1:SetCondition(s.condition)
@@ -47,4 +48,6 @@ function s.activate(e,tp,eg,ep,ev,re,r,rp)
 	if max_supply<10 then
 		Duel.AddMaxSupply(tp,1)
 	end
+	Duel.BreakEffect()
+	Duel.SendtoGrave(e:GetHandler(),REASON_DISCARD)
 end

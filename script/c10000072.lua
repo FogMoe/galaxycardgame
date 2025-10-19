@@ -4,7 +4,8 @@ function s.initial(c)
 	--激活效果
 	local e1=Effect.CreateEffect(c)
 	e1:SetCategory(CATEGORY_SPECIAL_SUMMON+CATEGORY_TOKEN)
-	e1:SetType(EFFECT_TYPE_ACTIVATE)
+	e1:SetType(EFFECT_TYPE_IGNITION)
+	e1:SetRange(LOCATION_HAND)
 	e1:SetCode(EVENT_FREE_CHAIN)
 	e1:SetCost(s.cost)
 	e1:SetTarget(s.target)
@@ -56,6 +57,8 @@ function s.activate(e,tp,eg,ep,ev,re,r,rp)
 			end
 		end
 	end
+	Duel.BreakEffect()
+	Duel.SendtoGrave(e:GetHandler(),REASON_DISCARD)
 end
 
 --哺乳类单位过滤器（排除克隆体战士本身）
