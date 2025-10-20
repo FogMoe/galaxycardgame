@@ -43,8 +43,8 @@
 
 - 仅在定义 `YGOPRO_USE_STEAM_SDK` 且 `steam_sdk_available == true` 时才会记录或查询 Steam 统计。
 - 目前内置两个总量型统计：
-  - `TotalGamesPlayed`：在网络对战结束时（消息 `MSG_WIN`），若当前对战不是单人模式、不是录像回放且本地玩家处于 0~3 号座位，则调用 `Game::RecordSteamMatchPlayed()` 自增 1。
-  - `TotalWins`：在本地玩家真实胜出时（`Game::OnLocalPlayerWin()`），满足上述条件且非单人/非录像时调用 `Game::RecordSteamMatchWin()` 自增 1。
+  - `TotalGamesPlayed`：在网络对战结束时（消息 `MSG_WIN`），若当前对战不是单人模式、不是录像回放、不是人机模式（`bot_mode == false`），且本地玩家处于 0~3 号座位，则调用 `Game::RecordSteamMatchPlayed()` 自增 1。
+  - `TotalWins`：在本地玩家真实胜出时（`Game::OnLocalPlayerWin()`），满足上述条件且非单人/非录像/非人机时调用 `Game::RecordSteamMatchWin()` 自增 1。
 - 两个自增函数内部都会先读取原值（`ISteamUserStats::GetStat`），若调用失败或达到 `int32` 上限会提前返回，写入成功后立刻调用 `StoreStats()`。
 - 对外提供的查询接口：
   - `Game::TryGetSteamStatInt(const char* stat_id, int32_t& out_value)`：通用读取封装，返回值表示是否成功获取。

@@ -2624,6 +2624,8 @@ void Game::OnLocalPlayerWin() {
 		TryUnlockPendingSteamAchievements();
 		return;
 	}
+	if(bot_mode)
+		return;
 	steam_first_victory_pending = true;
 	TryUnlockPendingSteamAchievements();
 	RecordSteamMatchWin();
