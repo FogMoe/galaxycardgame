@@ -2401,7 +2401,7 @@ local function GalaxyCommanderBuffFilter(c,tp)
 end
 
 function Galaxy.CommanderBuffCondition(e,tp,eg,ep,ev,re,r,rp)
-	return Duel.GetTurnCount() >= 5 and Duel.GetTurnPlayer() == tp
+	return Duel.GetTurnCount() >= 10 and Duel.GetTurnPlayer() == tp
 end
 
 function Galaxy.CommanderBuffCost(e,tp,eg,ep,ev,re,r,rp,chk)
