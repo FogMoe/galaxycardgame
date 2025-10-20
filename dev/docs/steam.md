@@ -33,7 +33,7 @@
 - 当前内置成就：
   - `ACH_FIRST_LAUNCH`：首次从 Steam 启动游戏，在 `SteamAPI_Init()` 成功后标记。
   - `ACH_FIRST_DECK_BUILD`：首次从卡组编辑器返回主菜单，在 `Game::OnDeckBuilderClosed()` 中标记。
-  - `ACH_FIRST_VICTORY`：首次线上对局获胜，在 `Game::OnLocalPlayerWin()` 中标记，仅对参战玩家生效（旁观、录像以及单人/残局模式不会触发）。
+  - `ACH_FIRST_VICTORY`：首次线上对局获胜，在 `Game::OnLocalPlayerWin()` 中标记，仅对参战玩家生效（旁观、录像、人机模式以及单人/残局模式不会触发）。
   - `ACH_FIRST_CAMPAIGN_WIN`：首次通关单人（Campaign/残局）模式，在 `Game::OnLocalPlayerWin()` 中且 `dInfo.isSingleMode == true` 时标记。
 - 每个触发入口都会先检查 `steam_sdk_available`，并在 Steam 服务不可用时静默跳过，确保无 SDK / 未登录情况下仍能正常游玩。
 - `TryUnlockPendingSteamAchievements()` 会重复查询 SteamUserStats，直到 Steam 客户端同步完成为止；调用是幂等的，可以安全地放在主循环。
