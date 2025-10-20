@@ -1,0 +1,42 @@
+{
+  "welcome": [
+    "Hi, I'm GCGBot."
+  ],
+  "deckerror": [
+    "Sorry, there's a problem with my deck."
+  ],
+  "duelstart": [
+    "It's time to battle!"
+  ],
+  "newturn": [
+    "My turn!"
+  ],
+  "endturn": [
+    "Your turn."
+  ],
+  "directattack": [
+    "Attack!"
+  ],
+  "attack": [
+    "Attack!"
+  ],
+  "ondirectattack": [
+    "Don't attack me!"
+  ],
+  "facedownmonstername": "gcg",
+  "activate": [
+    "I use {0}."
+  ],
+  "summon": [
+    "I use {0}."
+  ],
+  "setmonster": [
+    "I use {0}."
+  ],
+  "chaining": [
+    "I use {0}."
+  ],
+  "surrender": [
+    "You win."
+  ]
+}

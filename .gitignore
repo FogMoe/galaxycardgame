@@ -40,11 +40,11 @@ build
 /*.dylib
 
 # windbot related files
-/[Bb]ot
-/[Bb]ot.conf
-/[Bb]ot.exe
-/[Bb]ot.sh
-/[Ww]ind[Bb]ot
+# /[Bb]ot
+# /[Bb]ot.conf
+# /[Bb]ot.exe
+# /[Bb]ot.sh
+# /[Ww]ind[Bb]ot
 
 # ygopro config file
 /system_user.conf
