@@ -1025,10 +1025,11 @@ bool Game::Initialize() {
 		cbBotDeck->setMaxSelectionRows(6);
 		cbBotDeck->setVisible(false);
 		cbBotRule = env->addComboBox(irr::core::rect<irr::s32>(360, 165, 560, 190), tabBot, COMBOBOX_BOT_RULE);
-		cbBotRule->addItem(dataManager.GetSysString(1262));
-		cbBotRule->addItem(dataManager.GetSysString(1263));
-		cbBotRule->addItem(dataManager.GetSysString(1264));
-		cbBotRule->setSelected(gameConf.default_rule - 3);
+		cbBotRule->addItem(dataManager.GetSysString(1261));
+		// cbBotRule->addItem(dataManager.GetSysString(1262));
+		// cbBotRule->addItem(dataManager.GetSysString(1263));
+		// cbBotRule->addItem(dataManager.GetSysString(1264));
+		cbBotRule->setSelected(gameConf.default_rule - 2);
 		chkBotHand = env->addCheckBox(false, irr::core::rect<irr::s32>(360, 200, 560, 220), tabBot, -1, dataManager.GetSysString(1384));
 		chkBotNoCheckDeck = env->addCheckBox(false, irr::core::rect<irr::s32>(360, 230, 560, 250), tabBot, -1, dataManager.GetSysString(1229));
 		chkBotNoShuffleDeck = env->addCheckBox(false, irr::core::rect<irr::s32>(360, 260, 560, 280), tabBot, -1, dataManager.GetSysString(1230));
@@ -1648,14 +1649,16 @@ void Game::RefreshBot() {
 					continue;
 				}
 #endif
-				newinfo.support_master_rule_3 = !!std::strstr(linebuf, "SUPPORT_MASTER_RULE_3");
-				newinfo.support_new_master_rule = !!std::strstr(linebuf, "SUPPORT_NEW_MASTER_RULE");
-				newinfo.support_master_rule_2020 = !!std::strstr(linebuf, "SUPPORT_MASTER_RULE_2020");
+				newinfo.support_master_rule_2 = !!std::strstr(linebuf, "SUPPORT_MASTER_RULE_2");
+				// newinfo.support_master_rule_3 = !!std::strstr(linebuf, "SUPPORT_MASTER_RULE_3");
+				// newinfo.support_new_master_rule = !!std::strstr(linebuf, "SUPPORT_NEW_MASTER_RULE");
+				// newinfo.support_master_rule_2020 = !!std::strstr(linebuf, "SUPPORT_MASTER_RULE_2020");
 				newinfo.select_deckfile = !!std::strstr(linebuf, "SELECT_DECKFILE");
-				int rule = cbBotRule->getSelected() + 3;
-				if((rule == 3 && newinfo.support_master_rule_3)
-					|| (rule == 4 && newinfo.support_new_master_rule)
-					|| (rule == 5 && newinfo.support_master_rule_2020))
+				int rule = cbBotRule->getSelected() + 2;
+				if((rule == 2 && newinfo.support_master_rule_2))
+					// || (rule == 3 && newinfo.support_master_rule_3)
+					// || (rule == 4 && newinfo.support_new_master_rule)
+					// || (rule == 5 && newinfo.support_master_rule_2020))
 					botInfo.push_back(newinfo);
 				continue;
 			}

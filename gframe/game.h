@@ -174,9 +174,10 @@ struct BotInfo {
 	wchar_t name[256]{};
 	wchar_t command[256]{};
 	wchar_t desc[256]{};
-	bool support_master_rule_3{ false };
-	bool support_new_master_rule{ false };
-	bool support_master_rule_2020{ false };
+	bool support_master_rule_2{ false };
+	// bool support_master_rule_3{ false };
+	// bool support_new_master_rule{ false };
+	// bool support_master_rule_2020{ false };
 	bool select_deckfile{ false };
 };
 
