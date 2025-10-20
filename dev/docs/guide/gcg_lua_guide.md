@@ -126,6 +126,7 @@
 - HP 相关：`GetHp()`、`GetMaxHp()`、`GetBaseHp()`。
 - 补给成本：`GetSupplyCost()`、`IsSupplyCostAbove(n)`。
 - 特性与类别：`IsGalaxyProperty(prop)`、`IsGalaxyCategory(cat)`。
+- 指挥官判定：`IsCommanderCard([require_onfield=true])`（默认要求在支援区中线，传 `false` 时仅检查属性与类型）。
 
 ## 5. 常用脚本模式
 

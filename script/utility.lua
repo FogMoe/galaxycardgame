@@ -2916,9 +2916,39 @@ Card.IsGalaxyCategory = Card.IsRace
 Card.GetGalaxyCategory = Card.GetRace
 Card.GetOriginalGalaxyCategory = Card.GetOriginalRace
 
+---语义别名：Card:IsCommanderCard()
+---@param c Card
+---@param require_onfield boolean?
+---@return boolean
+function Card.IsCommanderCard(c, require_onfield)
+	return Galaxy.IsCommanderCard(c, require_onfield)
+end
+
 --==============================================
 -- Galaxy 函数
 --==============================================
+
+---便携判断：当前卡片是否视为银河指挥官
+---@param c Card
+---@param require_onfield boolean? 是否要求在场上支援区中线位置，默认开启
+---@return boolean
+function Galaxy.IsCommanderCard(c, require_onfield)
+	if aux.GetValueType(c) ~= "Card" then
+		return false
+	end
+	if require_onfield ~= false then
+		if not c:IsLocation(GALAXY_LOCATION_SUPPORT_ZONE) then
+			return false
+		end
+		if c:GetSequence() ~= 2 then
+			return false
+		end
+	end
+	if not c:IsGalaxyProperty(GALAXY_PROPERTY_COMMANDER) then
+		return false
+	end
+	return c:IsType(GALAXY_TYPE_LEADER)
+end
 
 --移除护盾显示
 function Galaxy.RemoveShieldDisplay(c)
