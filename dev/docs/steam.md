@@ -35,6 +35,7 @@
   - `ACH_FIRST_DECK_BUILD`：首次从卡组编辑器返回主菜单，在 `Game::OnDeckBuilderClosed()` 中标记。
   - `ACH_FIRST_VICTORY`：首次线上对局获胜，在 `Game::OnLocalPlayerWin()` 中标记，仅对参战玩家生效（旁观、录像、人机模式以及单人/残局模式不会触发）。
   - `ACH_FIRST_CAMPAIGN_WIN`：首次通关单人（Campaign/残局）模式，在 `Game::OnLocalPlayerWin()` 中且 `dInfo.isSingleMode == true` 时标记。
+  - `ACH_PLAY_BOT_MODE`：首次进入人机对战，在 `Game::OnBotMatchStarted()` 中标记，仅在成功启动 bot 对局时触发。
 - 每个触发入口都会先检查 `steam_sdk_available`，并在 Steam 服务不可用时静默跳过，确保无 SDK / 未登录情况下仍能正常游玩。
 - `TryUnlockPendingSteamAchievements()` 会重复查询 SteamUserStats，直到 Steam 客户端同步完成为止；调用是幂等的，可以安全地放在主循环。
 - 新增成就时，保持上述模式：添加状态位、在事件入口设置、在统一函数中追加 `try_unlock("<ACH_ID>", flag)`，并在后台配置成就属性。

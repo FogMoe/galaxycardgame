@@ -273,6 +273,7 @@ public:
 #endif
 	void OnDeckBuilderClosed();
 	void OnLocalPlayerWin();
+	void OnBotMatchStarted();
 
 	int LocalPlayer(int player) const;
 	int OppositePlayer(int player);
@@ -374,6 +375,7 @@ public:
 	bool steam_first_deck_build_pending{};
 	bool steam_first_victory_pending{};
 	bool steam_first_campaign_win_pending{};
+	bool steam_first_bot_mode_pending{};
 	SteamLeaderboard_t steam_total_games_leaderboard{};
 	CCallResult<Game, LeaderboardFindResult_t> steam_total_games_find_call;
 	CCallResult<Game, LeaderboardScoreUploaded_t> steam_total_games_upload_call;

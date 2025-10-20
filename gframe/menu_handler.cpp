@@ -405,10 +405,11 @@ bool MenuHandler::OnEvent(const irr::SEvent& event) {
 					}
 				}
 #endif
-				mainGame->btnStartBot->setEnabled(false);
-				mainGame->btnBotCancel->setEnabled(false);
-				break;
-			}
+					mainGame->btnStartBot->setEnabled(false);
+					mainGame->btnBotCancel->setEnabled(false);
+					mainGame->OnBotMatchStarted();
+					break;
+				}
 			case BUTTON_LOAD_SINGLEPLAY: {
 				if(!open_file && mainGame->lstSinglePlayList->getSelected() == -1)
 					break;

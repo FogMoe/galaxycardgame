@@ -2334,6 +2334,7 @@ void Game::TryUnlockPendingSteamAchievements() {
 	try_unlock("ACH_FIRST_DECK_BUILD", steam_first_deck_build_pending);
 	try_unlock("ACH_FIRST_VICTORY", steam_first_victory_pending);
 	try_unlock("ACH_FIRST_CAMPAIGN_WIN", steam_first_campaign_win_pending);
+	try_unlock("ACH_PLAY_BOT_MODE", steam_first_bot_mode_pending);
 }
 void Game::RecordSteamMatchPlayed() {
 	if(!steam_sdk_available)
@@ -2607,6 +2608,16 @@ void Game::UpdateSteamRichPresence(const char* status) {
 	}
 }
 #endif
+void Game::OnBotMatchStarted() {
+#ifdef YGOPRO_USE_STEAM_SDK
+	if(!steam_sdk_available)
+		return;
+	if(!bot_mode)
+		return;
+	steam_first_bot_mode_pending = true;
+	TryUnlockPendingSteamAchievements();
+#endif
+}
 void Game::OnDeckBuilderClosed() {
 #ifdef YGOPRO_USE_STEAM_SDK
 	if(steam_sdk_available) {
